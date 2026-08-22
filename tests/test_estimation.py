@@ -49,9 +49,14 @@ def test_calculate_annual_energy_estimation_wollongong_payload():
     req = AnnualEstimationRequest(**payload_dict)
     res = calculate_annual_energy_estimation(req)
 
-    # 61 days bill: 785 / 61 = 12.86885 kWh/day baseline
-    # 12 months extrapolation yielding approximately 5744 - 5746 kWh/year
-    assert 5700.0 <= res.estimated_annual_usage_kwh <= 5800.0
+    assert len(res.monthly_usage) == 12
+    assert res.estimated_annual_usage_kwh == pytest.approx(
+        sum(month.usage_kwh for month in res.monthly_usage), abs=0.1
+    )
+    assert res.observed_month_count == 1
+    assert res.profile_source == "single_bill_and_survey"
+    assert res.data_quality == "low"
+    assert res.estimated_annual_usage_kwh > 785 / 61 * 365
 
 
 def test_estimate_annual_load_endpoint_live():
@@ -153,3 +158,72 @@ def test_invalid_date_ordering():
     response = client.post("/api/v1/analytics/estimate-annual-load", json=payload_json)
     assert response.status_code == 400
     assert "billingPeriodEnd must be after billingPeriodStart" in response.json()["detail"]
+
+
+def test_observed_months_are_preserved_and_profiles_reconcile():
+    request = AnnualEstimationRequest.model_validate(
+        {
+            "formData": {
+                "billUsageKwh": 620,
+                "billingPeriodStart": "2026-01-01",
+                "billingPeriodEnd": "2026-02-01",
+                "homeDuringDay": "sometimes",
+                "observedMonthlyUsage": [
+                    {"month": "2026-01-01", "usageKwh": 620},
+                    {"month": "2026-07-01", "usageKwh": 810},
+                ],
+            }
+        }
+    )
+
+    result = calculate_annual_energy_estimation(request)
+    monthly = {item.calendar_month: item for item in result.monthly_usage}
+
+    assert monthly[1].usage_kwh == 620
+    assert monthly[7].usage_kwh == 810
+    assert monthly[1].source == "observed_bill"
+    assert result.observed_month_count == 2
+    assert result.profile_source == "observed_and_survey_derived"
+    assert result.estimated_annual_usage_kwh == pytest.approx(
+        sum(item.usage_kwh for item in result.monthly_usage), abs=0.1
+    )
+
+
+def test_daytime_occupancy_changes_overlap_not_measured_energy():
+    base = {
+        "billUsageKwh": 620,
+        "billingPeriodStart": "2026-01-01",
+        "billingPeriodEnd": "2026-02-01",
+    }
+    most = calculate_annual_energy_estimation(
+        AnnualEstimationRequest.model_validate(
+            {"formData": {**base, "homeDuringDay": "most"}}
+        )
+    )
+    rarely = calculate_annual_energy_estimation(
+        AnnualEstimationRequest.model_validate(
+            {"formData": {**base, "homeDuringDay": "rarely"}}
+        )
+    )
+
+    assert most.estimated_annual_usage_kwh == rarely.estimated_annual_usage_kwh
+    assert most.monthly_usage[0].daytime_usage_ratio > rarely.monthly_usage[0].daytime_usage_ratio
+
+
+def test_duplicate_observed_calendar_months_are_rejected():
+    response = client.post(
+        "/api/v1/analytics/estimate-annual-load",
+        json={
+            "formData": {
+                "billUsageKwh": 620,
+                "billingPeriodStart": "2026-01-01",
+                "billingPeriodEnd": "2026-02-01",
+                "observedMonthlyUsage": [
+                    {"month": "2025-01-01", "usageKwh": 500},
+                    {"month": "2026-01-01", "usageKwh": 510},
+                ],
+            }
+        },
+    )
+
+    assert response.status_code == 422

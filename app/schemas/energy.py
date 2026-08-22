@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from .common import ApiModel
 
 
-HoursBucket = Literal["0", "none", "0-2", "2-4", "4-6", "6+"]
+HoursBucket = Literal["0", "none", "0-2", "2-4", "4-6", "4-8", "6+", "8+"]
 
 
 class Property(ApiModel):
@@ -304,6 +304,18 @@ class RawTelemetryQueryResponse(ApiModel):
     data: list[TelemetryPacket]
 
 
+class ObservedMonthlyUsage(ApiModel):
+    month: date
+    usage_kwh: float = Field(ge=0, alias="usageKwh")
+
+    @field_validator("month")
+    @classmethod
+    def validate_first_day(cls, value: date) -> date:
+        if value.day != 1:
+            raise ValueError("observed monthly usage month must be the first day of the month")
+        return value
+
+
 class SurveyFormData(ApiModel):
     address: Optional[str] = None
     bill_usage_kwh: float = Field(..., ge=0, alias="billUsageKwh")
@@ -311,6 +323,7 @@ class SurveyFormData(ApiModel):
     billing_period_end: date = Field(..., alias="billingPeriodEnd")
     bill_total_cost_dollars: Optional[float] = Field(default=None, ge=0, alias="billTotalCostDollars")
     home_during_day: Optional[Literal["most", "sometimes", "rarely"]] = Field(default="most", alias="homeDuringDay")
+    occupant_count: int = Field(default=1, ge=1, le=20, alias="occupantCount")
     heating_not_used_this_month: bool = Field(default=True, alias="heatingNotUsedThisMonth")
     heating_hours: Optional[HoursBucket] = Field(default="2-4", alias="heatingHours")
     cooling_not_used_this_month: bool = Field(default=True, alias="coolingNotUsedThisMonth")
@@ -321,8 +334,18 @@ class SurveyFormData(ApiModel):
     ev_hours: Optional[HoursBucket] = Field(default="0-2", alias="evHours")
     hot_water_not_used_this_month: bool = Field(default=True, alias="hotWaterNotUsedThisMonth")
     hot_water_hours: Optional[HoursBucket] = Field(default="0-2", alias="hotWaterHours")
+    observed_monthly_usage: list[ObservedMonthlyUsage] = Field(
+        default_factory=list,
+        alias="observedMonthlyUsage",
+        description="Optional canonical monthly bill totals. These override survey-derived values for matching months.",
+    )
 
-
+    @model_validator(mode="after")
+    def validate_observed_months(self) -> "SurveyFormData":
+        months = [record.month.month for record in self.observed_monthly_usage]
+        if len(months) != len(set(months)):
+            raise ValueError("observedMonthlyUsage contains duplicate calendar months")
+        return self
 class AnnualEstimationRequest(ApiModel):
     address: Optional[str] = None
     scenario: Optional[str] = None
@@ -332,5 +355,21 @@ class AnnualEstimationRequest(ApiModel):
     mock: bool = False
 
 
+class MonthlyDemandEstimate(ApiModel):
+    calendar_month: int = Field(ge=1, le=12)
+    month_name: str
+    usage_kwh: float = Field(ge=0)
+    daytime_usage_ratio: float = Field(ge=0, le=1)
+    source: Literal["observed_bill", "bill_period_derived", "survey_derived"]
+
+
 class AnnualEstimationResponse(ApiModel):
     estimated_annual_usage_kwh: float
+    monthly_usage: list[MonthlyDemandEstimate]
+    observed_month_count: int = Field(ge=0, le=12)
+    profile_source: Literal[
+        "observed_bills",
+        "observed_and_survey_derived",
+        "single_bill_and_survey",
+    ]
+    data_quality: Literal["high", "medium", "low"]

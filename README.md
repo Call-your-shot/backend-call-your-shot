@@ -65,7 +65,7 @@ PYTHONPYCACHEPREFIX=/private/tmp/pycache python3 -m pytest tests
 Current verified status:
 
 ```text
-68 passed
+80 passed
 ```
 
 ## Main Endpoints
@@ -131,7 +131,23 @@ Annual estimation:
 
 ```text
 POST /api/v1/analytics/estimate-annual-load
+POST /api/v1/solar-sizing/recommend
 ```
+
+The annual-load route produces a complete January-to-December demand profile.
+Real monthly bills are preserved exactly; missing months are derived from the
+observed bill period and survey-only appliance usage. Daytime occupancy changes
+the expected solar overlap, not the household's measured consumption.
+
+The sizing route evaluates the physical configurations that fit the roof. It
+does not automatically select the roof maximum. Each candidate is simulated
+against monthly demand and screened for tenant savings probability, onsite
+self-consumption, export share, median payback, and the marginal payback of the
+additional panels. The largest candidate passing every configurable guardrail
+is returned with the rejected alternatives and an explainable reason. The same
+monthly profiles and sizing snapshot can then be passed into
+`/api/v1/assessments/initial`, keeping the final ROI and proposal consistent
+with the panel recommendation.
 
 Telemetry:
 

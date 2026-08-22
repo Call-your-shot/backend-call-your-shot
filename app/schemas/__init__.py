@@ -2,6 +2,8 @@ from .common import ApiModel, ListResponse
 from .energy import (
     AnnualEstimationRequest,
     AnnualEstimationResponse,
+    MonthlyDemandEstimate,
+    ObservedMonthlyUsage,
     Battery,
     Dashboard,
     EnergyReading,
@@ -69,6 +71,8 @@ __all__ = [
     "AnalysisResponse",
     "AnnualEstimationRequest",
     "AnnualEstimationResponse",
+    "MonthlyDemandEstimate",
+    "ObservedMonthlyUsage",
     "Battery",
     "BatteryBMSTelemetry",
     "BatchPricingRequest",

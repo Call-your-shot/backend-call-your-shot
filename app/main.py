@@ -18,6 +18,7 @@ from .api_link import (
     pricing_router,
     proposal_router,
     roi_router,
+    sizing_router,
     user_router,
     workflow_router,
 )
@@ -48,6 +49,7 @@ app.include_router(notifications_router)
 app.include_router(plans_router)
 app.include_router(pricing_router)
 app.include_router(roi_router)
+app.include_router(sizing_router)
 app.include_router(workflow_router)
 app.include_router(user_router)
 app.include_router(proposal_router)
@@ -86,6 +88,7 @@ def root() -> dict[str, str]:
         "contracts": "/api/properties/{property_id}/contracts/generate",
         "roi": "/api/v1/roi/analyse",
         "initial_assessment": "/api/v1/assessments/initial",
+        "solar_sizing": "/api/v1/solar-sizing/recommend",
         "green_projects": "/api/v1/green-projects",
     }
 

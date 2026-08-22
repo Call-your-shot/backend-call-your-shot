@@ -60,6 +60,18 @@ def create_initial_assessment(
     scr_min, scr_mode, scr_max = OCCUPANCY_SELF_CONSUMPTION[
         request.household.daytime_occupancy
     ]
+    monthly_generation_weights = None
+    if request.system.monthly_generation_kwh:
+        generation_total = sum(request.system.monthly_generation_kwh)
+        monthly_generation_weights = [
+            value / generation_total for value in request.system.monthly_generation_kwh
+        ]
+    monthly_usage_weights = None
+    if request.household.monthly_usage_kwh:
+        usage_total = sum(request.household.monthly_usage_kwh)
+        monthly_usage_weights = [
+            value / usage_total for value in request.household.monthly_usage_kwh
+        ]
 
     estimate_request = InitialEstimateRequest(
         installation=InstallationData(
@@ -77,10 +89,12 @@ def create_initial_assessment(
             expected_annual_generation_kwh=request.system.expected_annual_generation_kwh,
             annual_variability_percentage=10,
             annual_panel_degradation_rate=0.005,
+            monthly_generation_weights=monthly_generation_weights,
         ),
         tenant_demand=InitialTenantDemandAssumptions(
             expected_annual_usage_kwh=request.household.expected_annual_usage_kwh,
             annual_usage_variability_percentage=15,
+            monthly_usage_weights=monthly_usage_weights,
         ),
         solar_utilisation=InitialSolarUtilisationAssumptions(
             expected_self_consumption_ratio=scr_mode,
@@ -190,6 +204,7 @@ def create_initial_assessment(
             ),
         ),
         monte_carlo=simulation,
+        sizing=request.sizing,
         warnings=warnings,
     )
     INITIAL_ASSESSMENTS[assessment.id] = assessment

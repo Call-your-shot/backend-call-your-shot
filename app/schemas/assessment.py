@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
 
 from ..utils.roi_engine.models import DistributionSummary, InitialEstimateResponse
@@ -33,6 +33,14 @@ class AssessmentSystem(AssessmentModel):
     expected_annual_generation_kwh: float = Field(gt=0)
     roof_area_m2: float | None = Field(default=None, ge=0)
     usable_roof_area_m2: float | None = Field(default=None, ge=0)
+    monthly_generation_kwh: list[float] | None = None
+
+    @field_validator("monthly_generation_kwh")
+    @classmethod
+    def validate_monthly_generation(cls, value: list[float] | None) -> list[float] | None:
+        if value is not None and (len(value) != 12 or any(item < 0 for item in value) or sum(value) <= 0):
+            raise ValueError("monthlyGenerationKwh must contain 12 non-negative values with a positive total")
+        return value
 
 
 class AssessmentHousehold(AssessmentModel):
@@ -40,6 +48,22 @@ class AssessmentHousehold(AssessmentModel):
     current_annual_bill_dollars: float | None = Field(default=None, ge=0)
     grid_rate_cents_per_kwh: float | None = Field(default=None, ge=0)
     daytime_occupancy: Literal["most", "sometimes", "rarely"]
+    monthly_usage_kwh: list[float] | None = None
+
+    @field_validator("monthly_usage_kwh")
+    @classmethod
+    def validate_monthly_usage(cls, value: list[float] | None) -> list[float] | None:
+        if value is not None and (len(value) != 12 or any(item < 0 for item in value) or sum(value) <= 0):
+            raise ValueError("monthlyUsageKwh must contain 12 non-negative values with a positive total")
+        return value
+
+
+class AssessmentSizingSelection(AssessmentModel):
+    recommended_candidate_id: str
+    recommended_panel_count: int = Field(gt=0)
+    roof_maximum_panel_count: int = Field(gt=0)
+    selection_method: str
+    recommendation_reason: str
 
 
 class AssessmentInstallationAssumptions(AssessmentModel):
@@ -75,6 +99,7 @@ class InitialAssessmentRequest(AssessmentModel):
     simulation: AssessmentSimulationConfig = Field(
         default_factory=AssessmentSimulationConfig
     )
+    sizing: AssessmentSizingSelection | None = None
 
 
 class TenantEconomics(AssessmentModel):
@@ -116,4 +141,5 @@ class InitialAssessmentResponse(AssessmentModel):
     landlord_economics: LandlordEconomics
     pricing: AssessmentPricingResult
     monte_carlo: InitialEstimateResponse
+    sizing: AssessmentSizingSelection | None = None
     warnings: list[dict[str, str]]

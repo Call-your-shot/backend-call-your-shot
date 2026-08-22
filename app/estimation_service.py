@@ -1,4 +1,5 @@
 import re
+from calendar import month_name, monthrange
 from datetime import date, datetime
 from typing import Optional, Union
 
@@ -68,60 +69,126 @@ def calculate_annual_energy_estimation(request: AnnualEstimationRequest) -> Annu
     # Base daily usage from bill
     base_daily_kwh = form.bill_usage_kwh / float(bill_days)
 
-    # Occupancy multiplier
-    occupancy_map = {
-        "most": 1.0,
-        "sometimes": 0.75,
-        "rarely": 0.50,
+    # Daytime occupancy changes the share of demand that can overlap solar.
+    # It must never reduce an observed electricity bill or total annual load.
+    daytime_ratio_map = {
+        "most": 0.55,
+        "sometimes": 0.40,
+        "rarely": 0.25,
     }
-
-    occupancy_factor = occupancy_map.get(form.home_during_day or "most", 1.0)
-    adjusted_base_daily_kwh = base_daily_kwh * occupancy_factor
+    daytime_usage_ratio = daytime_ratio_map.get(
+        form.home_during_day or "sometimes", 0.40
+    )
 
     # Appliance hourly loads
-    cooling_hrs = parse_hours_bucket(form.cooling_hours)
+    cooling_hrs = (
+        parse_hours_bucket(form.cooling_hours)
+        if form.cooling_not_used_this_month
+        else 0.0
+    )
     cooling_addition = cooling_hrs * 1.5
 
-    heating_hrs = parse_hours_bucket(form.heating_hours)
+    heating_hrs = (
+        parse_hours_bucket(form.heating_hours)
+        if form.heating_not_used_this_month
+        else 0.0
+    )
     heating_addition = heating_hrs * 1.5
-    hot_water_winter_penalty = 1.5
 
-    pool_hrs = parse_hours_bucket(form.pool_hours) if not form.pool_not_used_this_month else 0.0
+    pool_hrs = (
+        parse_hours_bucket(form.pool_hours)
+        if form.pool_not_used_this_month
+        else 0.0
+    )
     pool_addition = pool_hrs * 1.2
 
-    ev_hrs = parse_hours_bucket(form.ev_hours) if not form.ev_not_used_this_month else 0.0
+    ev_hrs = (
+        parse_hours_bucket(form.ev_hours) if form.ev_not_used_this_month else 0.0
+    )
     ev_addition = ev_hrs * 3.5
 
-    year_round_addition = pool_addition + ev_addition
+    hot_water_hrs = (
+        parse_hours_bucket(form.hot_water_hours)
+        if form.hot_water_not_used_this_month
+        else 0.0
+    )
+    hot_water_addition = hot_water_hrs * 1.5
 
-    # Month days in standard non-leap year (Jan=1..Dec=12)
-    month_days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    year_round_addition = pool_addition + ev_addition + hot_water_addition
 
-    monthly_totals: list[float] = []
+    observed_bill_days_by_month = {month: 0 for month in range(1, 13)}
+    cursor = start_date
+    while cursor < end_date:
+        observed_bill_days_by_month[cursor.month] += 1
+        cursor = date.fromordinal(cursor.toordinal() + 1)
 
-    for month_idx, days in enumerate(month_days, start=1):
+    observed_monthly = {
+        record.month.month: record.usage_kwh
+        for record in form.observed_monthly_usage
+    }
+    monthly_results = []
+
+    for month_idx in range(1, 13):
+        days = monthrange(2025, month_idx)[1]
+        if month_idx in observed_monthly:
+            monthly_kwh = observed_monthly[month_idx]
+            source = "observed_bill"
+            monthly_results.append(
+                {
+                    "calendar_month": month_idx,
+                    "month_name": month_name[month_idx],
+                    "usage_kwh": round(monthly_kwh, 1),
+                    "daytime_usage_ratio": daytime_usage_ratio,
+                    "source": source,
+                }
+            )
+            continue
+
+        extra_daily_kwh = year_round_addition
         if month_idx in (1, 2, 12):
-            # Summer Peak: Cooling load active
-            daily_load = adjusted_base_daily_kwh + cooling_addition + year_round_addition
+            extra_daily_kwh += cooling_addition
         elif month_idx in (6, 7, 8):
-            # Winter Peak: Space Heating load + Hot Water thermal load active
-            daily_load = adjusted_base_daily_kwh + heating_addition + hot_water_winter_penalty + year_round_addition
+            extra_daily_kwh += heating_addition
         elif month_idx == 5:
-            # May: Shoulder / Cool transition
-            mild_heating = heating_addition * 0.33 if heating_addition > 0 else 1.5
-            daily_load = adjusted_base_daily_kwh + mild_heating + year_round_addition
+            extra_daily_kwh += heating_addition * 0.33
         elif month_idx == 11:
-            # Nov: Shoulder / Warm transition
-            mild_cooling = cooling_addition * 0.33 if cooling_addition > 0 else 1.5
-            daily_load = adjusted_base_daily_kwh + mild_cooling + year_round_addition
-        else:
-            # Mar, Apr, Sep, Oct: Mild Shoulder baseline
-            daily_load = adjusted_base_daily_kwh + year_round_addition
+            extra_daily_kwh += cooling_addition * 0.33
 
-        monthly_totals.append(daily_load * days)
+        # The bill already contains real usage for the days it covers. Survey
+        # additions only apply to the remainder of that representative month.
+        derived_days = max(0, days - observed_bill_days_by_month[month_idx])
+        monthly_kwh = base_daily_kwh * days + extra_daily_kwh * derived_days
+        source = (
+            "bill_period_derived"
+            if observed_bill_days_by_month[month_idx] > 0
+            else "survey_derived"
+        )
+        monthly_results.append(
+            {
+                "calendar_month": month_idx,
+                "month_name": month_name[month_idx],
+                "usage_kwh": round(monthly_kwh, 1),
+                "daytime_usage_ratio": daytime_usage_ratio,
+                "source": source,
+            }
+        )
 
-    total_annual_kwh = sum(monthly_totals)
+    total_annual_kwh = sum(month["usage_kwh"] for month in monthly_results)
+    observed_count = len(observed_monthly)
+    if observed_count == 12:
+        profile_source = "observed_bills"
+        data_quality = "high"
+    elif observed_count > 0:
+        profile_source = "observed_and_survey_derived"
+        data_quality = "medium"
+    else:
+        profile_source = "single_bill_and_survey"
+        data_quality = "low"
 
     return AnnualEstimationResponse(
         estimated_annual_usage_kwh=round(total_annual_kwh, 1),
+        monthly_usage=monthly_results,
+        observed_month_count=observed_count or 1,
+        profile_source=profile_source,
+        data_quality=data_quality,
     )

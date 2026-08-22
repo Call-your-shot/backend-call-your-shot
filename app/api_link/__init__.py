@@ -11,6 +11,7 @@ from .plans import router as plans_router
 from .pricing import router as pricing_router
 from .proposals import router as proposal_router
 from .roi import router as roi_router
+from .sizing import router as sizing_router
 from .users import router as user_router
 from .workflow import router as workflow_router
 
@@ -28,6 +29,7 @@ __all__ = [
     "pricing_router",
     "proposal_router",
     "roi_router",
+    "sizing_router",
     "user_router",
     "workflow_router",
 ]

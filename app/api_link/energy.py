@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Literal
+from typing import Literal, Optional
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, Query, status
@@ -33,7 +33,15 @@ from ..schemas import (
     Tariff,
     TariffInput,
 )
+from ..schemas.frontend import InviteAcceptInput, OwnerEmailInput, PropertyInviteInput
 from ..utils import battery_snapshot, build_readings, dashboard_summary, estimate_solar, normalize_reading
+from ..utils.plan_views import (
+    accept_property_invitation,
+    approve_property_leave_request,
+    get_landlord_property,
+    invite_property_tenant,
+    list_landlord_properties,
+)
 
 router = APIRouter(prefix="/api", tags=["energy"])
 
@@ -52,16 +60,35 @@ def health() -> dict[str, str]:
     return {"status": "ok", "service": "energy-platform-fastapi"}
 
 
-@router.get("/properties", response_model=ListResponse)
-def list_properties() -> dict[str, list[Property]]:
+@router.get("/properties")
+def list_properties(email: Optional[str] = Query(None, min_length=3)) -> dict:
+    if email:
+        return list_landlord_properties(email)
     return {"data": [Property(**property_row) for property_row in PROPERTIES]}
 
 
-@router.get("/properties/{property_id}", response_model=Property)
-def get_property(property_id: str) -> Property:
+@router.get("/properties/{property_id}")
+def get_property(property_id: str, email: Optional[str] = Query(None, min_length=3)) -> dict:
+    if email:
+        return get_landlord_property(property_id, email)
     require_property(property_id)
     property_row = next(row for row in PROPERTIES if row["id"] == property_id)
     return Property(**property_row)
+
+
+@router.post("/properties/{property_id}/leave-request/approve")
+def approve_leave_request(property_id: str, payload: OwnerEmailInput) -> dict:
+    return approve_property_leave_request(property_id, payload.model_dump())
+
+
+@router.post("/properties/{property_id}/invite")
+def invite_tenant(property_id: str, payload: PropertyInviteInput) -> dict:
+    return invite_property_tenant(property_id, payload.model_dump())
+
+
+@router.post("/properties/{property_id}/invite/accept")
+def accept_tenant_invite(property_id: str, payload: InviteAcceptInput) -> dict:
+    return accept_property_invitation(property_id, payload.model_dump())
 
 
 @router.get("/properties/{property_id}/dashboard", response_model=Dashboard)

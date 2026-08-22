@@ -10,6 +10,8 @@ from .api_link import (
     estimation_router,
     green_credits_router,
     ingestion_router,
+    notifications_router,
+    plans_router,
     pricing_router,
     proposal_router,
     roi_router,
@@ -35,6 +37,8 @@ app.include_router(analytics_router)
 app.include_router(ingestion_router)
 app.include_router(estimation_router)
 app.include_router(green_credits_router)
+app.include_router(notifications_router)
+app.include_router(plans_router)
 app.include_router(pricing_router)
 app.include_router(roi_router)
 app.include_router(workflow_router)
@@ -55,6 +59,13 @@ def root() -> dict[str, str]:
         "ingestion_telemetry": "/api/v1/ingestion/telemetry",
         "estimate_annual_load": "/api/v1/analytics/estimate-annual-load",
         "pricing": "/api/v1/pricing/calculate",
+        "plans": "/api/plans?email={email}",
+        "plan_detail": "/api/plans/{id}?email={email}",
+        "plan_leave": "/api/plans/{id}/leave",
+        "frontend_notifications": "/api/notifications?email={email}",
+        "property_leave_approve": "/api/properties/{id}/leave-request/approve",
+        "property_invite": "/api/properties/{id}/invite",
+        "property_invite_accept": "/api/properties/{id}/invite/accept",
         "price_adjustments": "/api/properties/{property_id}/price-adjustments",
         "lease_requests": "/api/properties/{property_id}/lease-requests",
         "leave_request": "/api/properties/{property_id}/lease-requests/leave",

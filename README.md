@@ -133,6 +133,20 @@ GET  /api/v1/analytics/dashboard
 GET  /api/v1/telemetry/live
 ```
 
+Frontend views:
+
+```text
+GET /api/plans?email={email}
+GET /api/plans/{id}?email={email}
+POST /api/plans/{id}/leave
+GET /api/properties?email={email}
+GET /api/properties/{id}?email={email}
+POST /api/properties/{id}/leave-request/approve
+POST /api/properties/{id}/invite
+POST /api/properties/{id}/invite/accept
+GET /api/notifications?email={email}
+```
+
 Workflow:
 
 ```text

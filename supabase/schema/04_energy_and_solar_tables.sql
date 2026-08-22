@@ -51,6 +51,7 @@ create table price_adjustments (
   proposed_usage_rate numeric check (proposed_usage_rate is null or proposed_usage_rate >= 0),
   proposed_feed_in_rate numeric check (proposed_feed_in_rate is null or proposed_feed_in_rate >= 0),
   proposed_daily_charge numeric check (proposed_daily_charge is null or proposed_daily_charge >= 0),
+  fixed_solar_rate_cents_per_kwh numeric check (fixed_solar_rate_cents_per_kwh is null or fixed_solar_rate_cents_per_kwh >= 0),
   reason text,
   effective_from timestamptz not null,
   status adjustment_status not null default 'draft',

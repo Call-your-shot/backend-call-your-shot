@@ -182,6 +182,11 @@ class Dashboard(BaseModel):
     sustainability: dict[str, float]
     units: dict[str, str]
     series: list[EnergyReading]
+    role_panels: dict[str, Any] = Field(default_factory=dict)
+    roi_analytics: Optional[dict[str, Any]] = None
+    price_adjustments: list[Any] = Field(default_factory=list)
+    lease_requests: list[Any] = Field(default_factory=list)
+    contracts: list[Any] = Field(default_factory=list)
 class ListResponse(BaseModel):
     data: list[Any]
 
@@ -309,4 +314,3 @@ class AnnualEstimationRequest(ApiModel):
 
 class AnnualEstimationResponse(ApiModel):
     estimated_annual_usage_kwh: float
-

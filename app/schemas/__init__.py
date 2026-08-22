@@ -36,6 +36,14 @@ from .roi import (
     InitialEstimateResponse,
     SummaryResponse,
 )
+from .workflow import (
+    Contract,
+    ContractGenerationInput,
+    LeaseRequest,
+    LeaseRequestInput,
+    PriceAdjustment,
+    PriceAdjustmentInput,
+)
 
 __all__ = [
     "ApiModel",
@@ -47,6 +55,8 @@ __all__ = [
     "BatteryBMSTelemetry",
     "BatchPricingRequest",
     "BatchPricingResponse",
+    "Contract",
+    "ContractGenerationInput",
     "Dashboard",
     "DashboardAnalyticsResponse",
     "EnergyReading",
@@ -58,12 +68,16 @@ __all__ = [
     "IngestTelemetryResponse",
     "InitialEstimateRequest",
     "InitialEstimateResponse",
+    "LeaseRequest",
+    "LeaseRequestInput",
     "ListResponse",
     "MeterIngestionRequest",
     "MeterReadingInput",
     "Property",
     "PricingRequest",
     "PricingResult",
+    "PriceAdjustment",
+    "PriceAdjustmentInput",
     "RawTelemetryQueryResponse",
     "SolarAssessmentInput",
     "SolarInstallation",
@@ -75,4 +89,3 @@ __all__ = [
     "TariffInput",
     "TelemetryPacket",
 ]
-

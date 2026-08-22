@@ -6,7 +6,18 @@ from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, Query, status
 
-from ..data import ENERGY_READINGS, PROPERTY, PROPERTY_ID, SOLAR_ASSESSMENTS, SOLAR_INSTALLATIONS, TARIFF, TARIFFS
+from ..data import (
+    CONTRACTS,
+    ENERGY_READINGS,
+    LEASE_REQUESTS,
+    PRICE_ADJUSTMENTS,
+    PROPERTY,
+    PROPERTY_ID,
+    SOLAR_ASSESSMENTS,
+    SOLAR_INSTALLATIONS,
+    TARIFF,
+    TARIFFS,
+)
 from ..schemas import (
     Battery,
     Dashboard,
@@ -55,12 +66,52 @@ def get_property(property_id: str) -> Property:
 def get_dashboard(
     property_id: str,
     granularity: Literal["hour", "day", "week", "month"] = Query("day"),
+    role: Literal["tenant", "landlord", "agent"] = Query("landlord"),
 ) -> dict:
     require_property(property_id)
+    summary = dashboard_summary(granularity)
+    energy = summary["energy"]
+    financial = summary["financial"]
+    role_panels = {
+        "usage": {
+            "electricUsageKwh": energy["consumptionKwh"],
+            "gridImportKwh": energy["gridImportKwh"],
+            "solarGenerationKwh": energy["solarGenerationKwh"],
+            "batterySocPct": energy["batterySocPct"],
+        },
+        "pricing": {
+            "estimatedCost": financial["estimatedCost"],
+            "estimatedSavings": financial["estimatedSavings"],
+            "gridRateCentsPerKwh": financial["gridRateCentsPerKwh"],
+        },
+        "actions": ["view_usage", "view_savings"],
+    }
+    manager_extras = {}
+    if role in ("landlord", "agent"):
+        latest_assessment = next((row for row in SOLAR_ASSESSMENTS if row["property_id"] == property_id), None)
+        role_panels["actions"] = [
+            "view_usage",
+            "view_roi",
+            "create_price_adjustment",
+            "generate_ppa_contract",
+            "review_lease_requests",
+        ]
+        manager_extras = {
+            "roi_analytics": {
+                "estimatedRoiPct": latest_assessment.get("estimated_roi_pct") if latest_assessment else None,
+                "estimatedPaybackYears": latest_assessment.get("estimated_payback_years") if latest_assessment else None,
+                "installations": len([row for row in SOLAR_INSTALLATIONS if row["property_id"] == property_id]),
+            },
+            "price_adjustments": [row for row in PRICE_ADJUSTMENTS if row["property_id"] == property_id],
+            "lease_requests": [row for row in LEASE_REQUESTS if row["property_id"] == property_id],
+            "contracts": [row for row in CONTRACTS if row["property_id"] == property_id],
+        }
     return {
         "property": PROPERTY,
-        "viewer": {"role": "landlord", "mode": "fastapi_demo"},
-        **dashboard_summary(granularity),
+        "viewer": {"role": role, "mode": "fastapi_demo"},
+        **summary,
+        "role_panels": role_panels,
+        **manager_extras,
     }
 
 

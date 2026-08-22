@@ -4,6 +4,7 @@ from .estimation import router as estimation_router
 from .ingestion import router as ingestion_router
 from .pricing import router as pricing_router
 from .roi import router as roi_router
+from .users import router as user_router
 from .workflow import router as workflow_router
 
 __all__ = [
@@ -13,5 +14,7 @@ __all__ = [
     "ingestion_router",
     "pricing_router",
     "roi_router",
+    "user_router",
     "workflow_router",
 ]
+

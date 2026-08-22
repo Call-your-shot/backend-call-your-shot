@@ -36,6 +36,7 @@ from .roi import (
     InitialEstimateResponse,
     SummaryResponse,
 )
+from .user import CreateUserInput, UserResponse
 from .workflow import (
     Contract,
     ContractGenerationInput,
@@ -57,6 +58,7 @@ __all__ = [
     "BatchPricingResponse",
     "Contract",
     "ContractGenerationInput",
+    "CreateUserInput",
     "Dashboard",
     "DashboardAnalyticsResponse",
     "EnergyReading",
@@ -88,4 +90,5 @@ __all__ = [
     "Tariff",
     "TariffInput",
     "TelemetryPacket",
+    "UserResponse",
 ]

@@ -11,6 +11,7 @@ from .api_link import (
     ingestion_router,
     pricing_router,
     roi_router,
+    user_router,
     workflow_router,
 )
 
@@ -34,6 +35,7 @@ app.include_router(estimation_router)
 app.include_router(pricing_router)
 app.include_router(roi_router)
 app.include_router(workflow_router)
+app.include_router(user_router)
 
 
 @app.get("/")
@@ -43,6 +45,7 @@ def root() -> dict[str, str]:
         "service": "energy-platform-fastapi",
         "docs": "/docs",
         "health": "/api/health",
+        "create_user": "/create-user",
         "analytics_dashboard": "/api/v1/analytics/dashboard",
         "ingestion_telemetry": "/api/v1/ingestion/telemetry",
         "estimate_annual_load": "/api/v1/analytics/estimate-annual-load",
@@ -52,6 +55,7 @@ def root() -> dict[str, str]:
         "contracts": "/api/properties/{property_id}/contracts/generate",
         "roi": "/api/v1/roi/analyse",
     }
+
 
 
 if __name__ == "__main__":

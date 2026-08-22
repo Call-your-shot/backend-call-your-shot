@@ -137,6 +137,10 @@ def list_tenancy_plans(email: str) -> dict:
     return {"plans": [_plan_summary(row) for row in TENANCY_PLANS if _email_matches(row, email)]}
 
 
+def list_tenancy_details(email: str) -> list[dict]:
+    return [_plan_detail(row) for row in TENANCY_PLANS if _email_matches(row, email)]
+
+
 def get_tenancy_plan(plan_id: str, email: str) -> dict:
     return _plan_detail(_find_plan(plan_id, email))
 
@@ -216,11 +220,22 @@ def list_landlord_properties(email: str) -> dict:
     return {"properties": [_property_summary(row) for row in LANDLORD_PROPERTY_VIEWS if _owner_matches(row, email)]}
 
 
+def list_landlord_property_details(email: str) -> list[dict]:
+    return [_property_detail(row) for row in LANDLORD_PROPERTY_VIEWS if _owner_matches(row, email)]
+
+
 def get_landlord_property(property_id: str, email: str) -> dict:
     row = _find_property(property_id)
     if not _owner_matches(row, email):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Email is not this property's owner")
     return _property_detail(row)
+
+
+def get_frontend_dashboard(email: str) -> dict:
+    return {
+        "tenancies": list_tenancy_details(email),
+        "ownedProperties": list_landlord_property_details(email),
+    }
 
 
 def _property_leave_request(row: dict) -> Optional[dict]:

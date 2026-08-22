@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .api_link import (
     analytics_router,
+    dashboard_router,
+    database_router,
     energy_router,
     estimation_router,
     green_credits_router,
@@ -19,6 +21,7 @@ from .api_link import (
     workflow_router,
 )
 
+load_dotenv()
 load_dotenv(".env.local")
 
 app = FastAPI(title="Energy Platform API", version="0.1.0")
@@ -33,6 +36,8 @@ app.add_middleware(
 )
 
 app.include_router(energy_router)
+app.include_router(dashboard_router)
+app.include_router(database_router)
 app.include_router(analytics_router)
 app.include_router(ingestion_router)
 app.include_router(estimation_router)
@@ -53,6 +58,8 @@ def root() -> dict[str, str]:
         "service": "energy-platform-fastapi",
         "docs": "/docs",
         "health": "/api/health",
+        "supabase_health": "/api/supabase/health",
+        "frontend_dashboard": "/api/dashboard?email={email}",
         "create_user": "/create-user",
         "create_proposal": "/create-proposal",
         "analytics_dashboard": "/api/v1/analytics/dashboard",

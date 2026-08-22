@@ -4,6 +4,10 @@ import os
 from typing import Any, Optional
 
 import httpx
+from dotenv import load_dotenv
+
+load_dotenv()
+load_dotenv(".env.local")
 
 
 class SupabaseRestClient:
@@ -81,3 +85,58 @@ def get_supabase_client() -> Optional[SupabaseRestClient]:
         return None
 
     return SupabaseRestClient(url, key)
+
+
+def get_database_url() -> Optional[str]:
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url or "[YOUR-PASSWORD]" in database_url or "YOUR-PASSWORD" in database_url:
+        return None
+    return database_url
+
+
+def get_postgres_connection():
+    database_url = get_database_url()
+    if not database_url:
+        return None
+
+    try:
+        import psycopg2
+    except ImportError as exc:
+        raise RuntimeError("psycopg2 is not installed. Run: pip install -r requirements.txt") from exc
+
+    return psycopg2.connect(database_url)
+
+
+def check_postgres_connection() -> dict[str, Any]:
+    database_url = get_database_url()
+    if not database_url:
+        return {
+            "connected": False,
+            "configured": False,
+            "detail": "DATABASE_URL is not set. Add it to .env or .env.local.",
+        }
+
+    try:
+        connection = get_postgres_connection()
+        if connection is None:
+            return {"connected": False, "configured": True, "detail": "Connection was not created."}
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("select current_database(), current_user, version();")
+                database_name, database_user, version = cursor.fetchone()
+        finally:
+            connection.close()
+
+        return {
+            "connected": True,
+            "configured": True,
+            "database": database_name,
+            "user": database_user,
+            "version": version,
+        }
+    except Exception as exc:
+        return {
+            "connected": False,
+            "configured": True,
+            "detail": str(exc),
+        }

@@ -63,6 +63,31 @@ def test_email_scoped_frontend_views_return_empty_lists():
     assert client.get("/api/properties", params={"email": "missing@example.com"}).json() == {"properties": []}
 
 
+def test_dashboard_combines_tenant_and_owner_views_by_email():
+    tenant_response = client.get("/api/dashboard", params={"email": "tenant@example.com"})
+    assert tenant_response.status_code == 200
+    tenant_dashboard = tenant_response.json()
+    assert tenant_dashboard["tenancies"][0]["id"] == "ten-priya-wollongong"
+    assert tenant_dashboard["tenancies"][0]["ratePerKwhCents"] == 15
+    assert tenant_dashboard["tenancies"][0]["monthly"][0]["solarUsedKwh"] == 200
+    assert tenant_dashboard["ownedProperties"] == []
+
+    owner_response = client.get("/api/dashboard", params={"email": "owner@example.com"})
+    assert owner_response.status_code == 200
+    owner_dashboard = owner_response.json()
+    assert owner_dashboard["tenancies"] == []
+    assert owner_dashboard["ownedProperties"][0]["id"] == "prop-owned-1"
+    assert owner_dashboard["ownedProperties"][0]["system"]["sizeKw"] == 7.9
+    assert owner_dashboard["ownedProperties"][0]["currentTenant"]["name"] == "Amelia Rossi"
+
+
+def test_dashboard_unknown_email_returns_empty_sections():
+    response = client.get("/api/dashboard", params={"email": "missing@example.com"})
+
+    assert response.status_code == 200
+    assert response.json() == {"tenancies": [], "ownedProperties": []}
+
+
 def test_tenant_leave_request_owner_approval_and_notifications():
     leave_response = client.post(
         "/api/plans/ten-priya-wollongong/leave",

@@ -136,6 +136,7 @@ GET  /api/v1/telemetry/live
 Frontend views:
 
 ```text
+GET /api/dashboard?email={email}
 GET /api/plans?email={email}
 GET /api/plans/{id}?email={email}
 POST /api/plans/{id}/leave
@@ -190,6 +191,26 @@ curl "http://127.0.0.1:8001/api/properties/11111111-1111-4111-8111-111111111111/
 ```
 
 ## Database Notes
+
+Direct Supabase Postgres connection uses `DATABASE_URL`.
+
+```bash
+cp .env.example .env
+```
+
+Then set your real password:
+
+```bash
+DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@db.ybsiutwhsrtzyycopdip.supabase.co:5432/postgres
+```
+
+If the password has special characters, percent-encode it before putting it in the URL.
+
+Connection check:
+
+```text
+GET /api/supabase/health
+```
 
 Supabase migrations live in:
 

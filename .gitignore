@@ -3,7 +3,9 @@ __pycache__/
 *.pyc
 *.pyo
 .pytest_cache/
+.venv/
 .env.local
+Agent.md
 
 # OS
 .DS_Store

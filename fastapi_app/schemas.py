@@ -60,12 +60,14 @@ class EnergyReading(ApiModel):
     interval_end: str
     consumption_kwh: float = Field(ge=0)
     solar_generation_kwh: float = Field(ge=0)
+    solar_consumed_by_tenant_kwh: Optional[float] = Field(default=None, ge=0)
     grid_import_kwh: float = Field(ge=0)
     grid_export_kwh: float = Field(ge=0)
     battery_charge_kwh: float = Field(ge=0)
     battery_discharge_kwh: float = Field(ge=0)
     battery_soc_pct: float = Field(ge=0, le=100)
     source: str
+    finalized_at: Optional[str] = None
 
 
 class EnergyReadingInput(ApiModel):
@@ -74,17 +76,36 @@ class EnergyReadingInput(ApiModel):
     interval_end: datetime = Field(alias="intervalEnd")
     consumption_kwh: float = Field(default=0, ge=0, alias="consumptionKwh")
     solar_generation_kwh: float = Field(default=0, ge=0, alias="solarGenerationKwh")
+    solar_consumed_by_tenant_kwh: Optional[float] = Field(
+        default=None, ge=0, alias="solarConsumedByTenantKwh"
+    )
     grid_import_kwh: float = Field(default=0, ge=0, alias="gridImportKwh")
     grid_export_kwh: float = Field(default=0, ge=0, alias="gridExportKwh")
     battery_charge_kwh: float = Field(default=0, ge=0, alias="batteryChargeKwh")
     battery_discharge_kwh: float = Field(default=0, ge=0, alias="batteryDischargeKwh")
     battery_soc_pct: Optional[float] = Field(default=None, ge=0, le=100, alias="batterySocPct")
     source: Literal["mock", "meter_api", "manual", "simulation"] = "manual"
+    finalized_at: Optional[datetime] = Field(default=None, alias="finalizedAt")
 
     @model_validator(mode="after")
     def check_interval(self) -> "EnergyReadingInput":
         if self.interval_end <= self.interval_start:
             raise ValueError("intervalEnd must be after intervalStart")
+        if (
+            self.solar_consumed_by_tenant_kwh is not None
+            and self.solar_consumed_by_tenant_kwh > self.consumption_kwh + 0.001
+        ):
+            raise ValueError(
+                "solarConsumedByTenantKwh cannot exceed interval consumption"
+            )
+        if (
+            self.solar_consumed_by_tenant_kwh is not None
+            and self.solar_consumed_by_tenant_kwh
+            > self.solar_generation_kwh + 0.001
+        ):
+            raise ValueError(
+                "solarConsumedByTenantKwh cannot exceed interval solar generation"
+            )
         return self
 
 
@@ -236,5 +257,3 @@ class RawTelemetryQueryResponse(ApiModel):
     date: Optional[str] = None
     count: int
     data: list[TelemetryPacket]
-
-

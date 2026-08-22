@@ -251,10 +251,14 @@ export async function createEnergyReading(req: NextRequest, propertyId: string) 
     interval_end: input.intervalEnd,
     consumption_kwh: input.consumptionKwh,
     solar_generation_kwh: input.solarGenerationKwh,
+    solar_consumed_by_tenant_kwh: input.solarConsumedByTenantKwh ?? null,
     grid_import_kwh: input.gridImportKwh,
     grid_export_kwh: input.gridExportKwh,
+    battery_charge_kwh: input.batteryChargeKwh,
+    battery_discharge_kwh: input.batteryDischargeKwh,
     battery_soc_pct: input.batterySocPct ?? null,
     source: input.source,
+    finalized_at: input.finalizedAt ?? null,
   }).select("*").single();
   if (error) return supabaseError(error);
   return ok({ data }, 201);

@@ -92,12 +92,22 @@ def normalize_reading(payload: dict, property_id: str, reading_id: str) -> dict:
         "interval_end": payload["interval_end"].isoformat(),
         "consumption_kwh": money(float(payload["consumption_kwh"])),
         "solar_generation_kwh": money(float(payload["solar_generation_kwh"])),
+        "solar_consumed_by_tenant_kwh": (
+            money(float(payload["solar_consumed_by_tenant_kwh"]))
+            if payload.get("solar_consumed_by_tenant_kwh") is not None
+            else None
+        ),
         "grid_import_kwh": money(float(payload["grid_import_kwh"])),
         "grid_export_kwh": money(float(payload["grid_export_kwh"])),
         "battery_charge_kwh": money(float(payload["battery_charge_kwh"])),
         "battery_discharge_kwh": money(float(payload["battery_discharge_kwh"])),
         "battery_soc_pct": money(float(battery_soc)),
         "source": payload["source"],
+        "finalized_at": (
+            payload["finalized_at"].isoformat()
+            if payload.get("finalized_at") is not None
+            else None
+        ),
     }
 
 

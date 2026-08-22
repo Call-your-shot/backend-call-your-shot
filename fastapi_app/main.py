@@ -4,10 +4,13 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .routers.analytics import router as analytics_router
+from .routers.green_credits import router as green_credits_router
 from .routers.ingestion import router as ingestion_router
 from .routes import router
 
-load_dotenv(".env.local")
+load_dotenv()
+load_dotenv(".env.local", override=True)
 
 app = FastAPI(title="Energy Platform API", version="0.1.0")
 
@@ -22,6 +25,8 @@ app.add_middleware(
 
 app.include_router(router)
 app.include_router(ingestion_router)
+app.include_router(analytics_router)
+app.include_router(green_credits_router)
 
 
 @app.get("/")
@@ -32,6 +37,7 @@ def root() -> dict[str, str]:
         "docs": "/docs",
         "health": "/api/health",
         "ingestion_telemetry": "/api/v1/ingestion/telemetry",
+        "green_projects": "/api/v1/green-projects",
     }
 
 
@@ -40,4 +46,3 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run("fastapi_app.main:app", host="0.0.0.0", port=int(os.getenv("PORT", "8001")), reload=True)
-

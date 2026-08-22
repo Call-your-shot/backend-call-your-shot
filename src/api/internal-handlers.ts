@@ -24,10 +24,14 @@ export async function ingestMeterReadings(req: NextRequest) {
     interval_end: reading.intervalEnd,
     consumption_kwh: reading.consumptionKwh,
     solar_generation_kwh: reading.solarGenerationKwh,
+    solar_consumed_by_tenant_kwh: reading.solarConsumedByTenantKwh ?? null,
     grid_import_kwh: reading.gridImportKwh,
     grid_export_kwh: reading.gridExportKwh,
+    battery_charge_kwh: reading.batteryChargeKwh,
+    battery_discharge_kwh: reading.batteryDischargeKwh,
     battery_soc_pct: reading.batterySocPct ?? null,
     source: reading.source,
+    finalized_at: reading.finalizedAt ?? null,
   }));
 
   const { data, error } = await ctx.supabaseAdmin

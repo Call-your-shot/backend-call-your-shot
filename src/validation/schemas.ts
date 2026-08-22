@@ -18,20 +18,44 @@ export const paginationQuerySchema = z.object({
   cursor: isoDateSchema.optional(),
 });
 
-export const energyReadingInputSchema = z.object({
-  meterId: uuidSchema.nullish(),
-  intervalStart: isoDateSchema,
-  intervalEnd: isoDateSchema,
-  consumptionKwh: nonNegativeNumber.default(0),
-  solarGenerationKwh: nonNegativeNumber.default(0),
-  gridImportKwh: nonNegativeNumber.default(0),
-  gridExportKwh: nonNegativeNumber.default(0),
-  batterySocPct: percentage.nullish(),
-  source: z.enum(["mock", "meter_api", "manual", "simulation"]).default("manual"),
-}).refine((value) => new Date(value.intervalEnd) > new Date(value.intervalStart), {
-  message: "intervalEnd must be after intervalStart",
-  path: ["intervalEnd"],
-});
+export const energyReadingInputSchema = z
+  .object({
+    meterId: uuidSchema.nullish(),
+    intervalStart: isoDateSchema,
+    intervalEnd: isoDateSchema,
+    consumptionKwh: nonNegativeNumber.default(0),
+    solarGenerationKwh: nonNegativeNumber.default(0),
+    solarConsumedByTenantKwh: nonNegativeNumber.nullish(),
+    gridImportKwh: nonNegativeNumber.default(0),
+    gridExportKwh: nonNegativeNumber.default(0),
+    batteryChargeKwh: nonNegativeNumber.default(0),
+    batteryDischargeKwh: nonNegativeNumber.default(0),
+    batterySocPct: percentage.nullish(),
+    finalizedAt: isoDateSchema.nullish(),
+    source: z.enum(["mock", "meter_api", "manual", "simulation"]).default("manual"),
+  })
+  .refine((value) => new Date(value.intervalEnd) > new Date(value.intervalStart), {
+    message: "intervalEnd must be after intervalStart",
+    path: ["intervalEnd"],
+  })
+  .refine(
+    (value) =>
+      value.solarConsumedByTenantKwh == null ||
+      value.solarConsumedByTenantKwh <= value.consumptionKwh + 0.001,
+    {
+      message: "solarConsumedByTenantKwh cannot exceed interval consumption",
+      path: ["solarConsumedByTenantKwh"],
+    }
+  )
+  .refine(
+    (value) =>
+      value.solarConsumedByTenantKwh == null ||
+      value.solarConsumedByTenantKwh <= value.solarGenerationKwh + 0.001,
+    {
+      message: "solarConsumedByTenantKwh cannot exceed interval solar generation",
+      path: ["solarConsumedByTenantKwh"],
+    }
+  );
 
 export const meterIngestionSchema = z.object({
   readings: z.array(energyReadingInputSchema.extend({ propertyId: uuidSchema })).min(1).max(1000),

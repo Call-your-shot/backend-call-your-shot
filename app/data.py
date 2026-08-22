@@ -55,4 +55,8 @@ PRICE_ADJUSTMENTS: list[dict] = []
 LEASE_REQUESTS: list[dict] = []
 CONTRACTS: list[dict] = []
 USERS: list[dict] = []
+PROPERTIES: list[dict] = [PROPERTY.copy()]
+PROPOSALS: list[dict] = []
+PROPERTY_MEMBERSHIPS: list[dict] = []
+
 

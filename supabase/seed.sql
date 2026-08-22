@@ -31,9 +31,9 @@ values
   ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'DEMO-METER-001', 'hybrid', 'mock', 'active', '{"interval":"hour"}')
 on conflict (id) do nothing;
 
-insert into energy_tariffs (id, property_id, name, usage_rate_per_kwh, feed_in_rate_per_kwh, daily_supply_charge, currency, valid_from, created_by)
+insert into energy_tariffs (id, property_id, name, usage_rate_per_kwh, grid_rate_cents_per_kwh, feed_in_rate_per_kwh, daily_supply_charge, currency, valid_from, created_by)
 values
-  ('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Demo Residential Solar Tariff', 0.34, 0.08, 1.12, 'AUD', now() - interval '90 days', '22222222-2222-4222-8222-222222222222')
+  ('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Demo Residential Solar Tariff', 0.34, 34, 0.08, 1.12, 'AUD', now() - interval '90 days', '22222222-2222-4222-8222-222222222222')
 on conflict (id) do nothing;
 
 insert into energy_readings (

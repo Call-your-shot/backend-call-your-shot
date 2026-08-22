@@ -57,6 +57,7 @@ describe("billing", () => {
       consumptionKwh: 160,
       solarGenerationKwh: 80,
       usageRatePerKwh: 0.34,
+      gridRateCentsPerKwh: 34,
       feedInRatePerKwh: 0.08,
       dailySupplyCharge: 1.12,
       carbonKgPerKwh: 0.68,
@@ -70,6 +71,25 @@ describe("billing", () => {
       estimatedSavings: 22,
       carbonAvoidedKg: 54.4,
     });
+  });
+
+  it("uses grid cents rate for imported energy when battery is depleted", () => {
+    const bill = calculateBill({
+      periodStart: new Date("2026-08-01T00:00:00.000Z"),
+      periodEnd: new Date("2026-08-02T00:00:00.000Z"),
+      gridImportKwh: 10,
+      gridExportKwh: 0,
+      consumptionKwh: 10,
+      solarGenerationKwh: 0,
+      usageRatePerKwh: 0.2,
+      gridRateCentsPerKwh: 40,
+      feedInRatePerKwh: 0,
+      dailySupplyCharge: 1,
+      carbonKgPerKwh: 0.68,
+    });
+
+    expect(bill.usageCost).toBe(4);
+    expect(bill.totalAmount).toBe(5);
   });
 });
 

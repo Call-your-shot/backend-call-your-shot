@@ -6,6 +6,7 @@ export interface BillCalculationInput {
   consumptionKwh: number;
   solarGenerationKwh: number;
   usageRatePerKwh: number;
+  gridRateCentsPerKwh?: number;
   feedInRatePerKwh: number;
   dailySupplyCharge: number;
   carbonKgPerKwh: number;
@@ -27,12 +28,13 @@ function money(value: number) {
 export function calculateBill(input: BillCalculationInput): BillCalculation {
   const msPerDay = 24 * 60 * 60 * 1000;
   const billableDays = Math.max(1, Math.ceil((input.periodEnd.getTime() - input.periodStart.getTime()) / msPerDay));
-  const usageCost = money(input.gridImportKwh * input.usageRatePerKwh);
+  const gridRatePerKwh = input.gridRateCentsPerKwh != null ? input.gridRateCentsPerKwh / 100 : input.usageRatePerKwh;
+  const usageCost = money(input.gridImportKwh * gridRatePerKwh);
   const supplyCost = money(billableDays * input.dailySupplyCharge);
   const solarCredit = money(input.gridExportKwh * input.feedInRatePerKwh);
   const totalAmount = money(Math.max(0, usageCost + supplyCost - solarCredit));
   const solarSelfConsumptionKwh = Math.max(0, input.solarGenerationKwh - input.gridExportKwh);
-  const estimatedSavings = money(solarSelfConsumptionKwh * input.usageRatePerKwh + solarCredit);
+  const estimatedSavings = money(solarSelfConsumptionKwh * gridRatePerKwh + solarCredit);
   const carbonAvoidedKg = Math.round(input.solarGenerationKwh * input.carbonKgPerKwh * 100) / 100;
 
   return { usageCost, supplyCost, solarCredit, totalAmount, estimatedSavings, carbonAvoidedKg };

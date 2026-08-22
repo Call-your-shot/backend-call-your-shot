@@ -61,6 +61,7 @@ export interface TariffRow {
   property_id: string | null;
   name: string;
   usage_rate_per_kwh: number;
+  grid_rate_cents_per_kwh: number;
   feed_in_rate_per_kwh: number;
   daily_supply_charge: number;
   currency: string;

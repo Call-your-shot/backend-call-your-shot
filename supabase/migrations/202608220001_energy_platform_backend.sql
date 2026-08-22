@@ -112,6 +112,7 @@ create table energy_tariffs (
   property_id uuid references properties(id) on delete cascade,
   name text not null,
   usage_rate_per_kwh numeric not null check (usage_rate_per_kwh >= 0),
+  grid_rate_cents_per_kwh numeric not null default 34 check (grid_rate_cents_per_kwh >= 0),
   feed_in_rate_per_kwh numeric not null default 0 check (feed_in_rate_per_kwh >= 0),
   daily_supply_charge numeric not null default 0 check (daily_supply_charge >= 0),
   currency text not null default 'AUD',

@@ -29,6 +29,26 @@ function buildEnv(): Partial<SupabaseEnv> {
   };
 }
 
+export function createLocalDemoReadContext(): BackendSupabaseContext | null {
+  if (process.env.NODE_ENV === "production") return null;
+
+  const envVars = readBackendEnv();
+  if (!envVars.SUPABASE_SECRET_KEY || envVars.SUPABASE_SECRET_KEY.includes("replace-with")) {
+    return null;
+  }
+
+  const env = buildEnv();
+  const admin = createAdminClient({ env });
+
+  return {
+    supabase: admin,
+    supabaseAdmin: admin,
+    userClaims: null,
+    jwtClaims: null,
+    authMode: "secret",
+  };
+}
+
 async function tokenFromCookies() {
   const env = readBackendEnv();
   if (!env.SUPABASE_URL || !env.SUPABASE_PUBLISHABLE_KEY) return null;

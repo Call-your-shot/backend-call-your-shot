@@ -40,6 +40,7 @@ export const meterIngestionSchema = z.object({
 export const tariffInputSchema = z.object({
   name: z.string().min(1).max(120),
   usageRatePerKwh: nonNegativeNumber,
+  gridRateCentsPerKwh: nonNegativeNumber.optional(),
   feedInRatePerKwh: nonNegativeNumber.default(0),
   dailySupplyCharge: nonNegativeNumber.default(0),
   currency: z.string().min(3).max(3).default("AUD"),

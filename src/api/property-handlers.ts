@@ -2,7 +2,12 @@ import type { NextRequest } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ZodError, type ZodType } from "zod";
 import { apiError, ok, supabaseError, validationError } from "@backend/api/responses";
-import { createApiSupabaseContext, getUserId, type BackendSupabaseContext } from "@backend/auth/supabase-context";
+import {
+  createApiSupabaseContext,
+  createLocalDemoReadContext,
+  getUserId,
+  type BackendSupabaseContext,
+} from "@backend/auth/supabase-context";
 import type { Database, ManagementRole, PropertyRole } from "@backend/db/database.types";
 import {
   contractInputSchema,
@@ -25,6 +30,14 @@ import { estimateSolar } from "@backend/services/solar-estimator";
 import { MockEnergyControlProvider } from "@mock/backend/providers/controls/mock-energy-control-provider";
 
 type Client = SupabaseClient;
+
+interface DashboardReading {
+  consumption_kwh: number | string;
+  solar_generation_kwh: number | string;
+  grid_import_kwh: number | string;
+  grid_export_kwh: number | string;
+  battery_soc_pct: number | string | null;
+}
 
 async function parseJson<T>(req: NextRequest, schema: ZodType<T>): Promise<{ data: T; response: null } | { data: null; response: Response }> {
   try {
@@ -83,20 +96,26 @@ export async function getMe(req: NextRequest) {
 
 export async function listProperties(req: NextRequest) {
   const { ctx, response } = await requireContext(req);
-  if (response) return response;
-  const { data, error } = await ctx.supabase.from("properties").select("*, property_memberships(*)").order("created_at");
+  const readCtx = ctx ?? createLocalDemoReadContext();
+  if (!readCtx) return response ?? apiError("AUTHENTICATION_ERROR", "Authentication is required", 401);
+
+  const { data, error } = await readCtx.supabase.from("properties").select("*, property_memberships(*)").order("created_at");
   if (error) return supabaseError(error);
-  return ok({ data });
+  return ok({ data, mode: ctx ? "user" : "local_demo_admin_read" });
 }
 
 export async function getProperty(req: NextRequest, propertyId: string) {
   const id = uuidSchema.safeParse(propertyId);
   if (!id.success) return validationError(id.error);
   const { ctx, response } = await requireContext(req);
-  if (response) return response;
-  const access = await requirePropertyAccess(ctx, id.data);
+  const readCtx = ctx ?? createLocalDemoReadContext();
+  if (!readCtx) return response ?? apiError("AUTHENTICATION_ERROR", "Authentication is required", 401);
+
+  const access = ctx
+    ? await requirePropertyAccess(ctx, id.data)
+    : { role: "landlord" as const, response: null };
   if (access.response) return access.response;
-  const { data, error } = await ctx.supabase.from("properties").select("*").eq("id", id.data).single();
+  const { data, error } = await readCtx.supabase.from("properties").select("*").eq("id", id.data).single();
   if (error) return supabaseError(error);
   return ok({ data, viewer: { role: access.role } });
 }
@@ -108,16 +127,20 @@ export async function getDashboard(req: NextRequest, propertyId: string) {
   if (!period.success) return validationError(period.error);
 
   const { ctx, response } = await requireContext(req);
-  if (response) return response;
-  const access = await requirePropertyAccess(ctx, id.data);
+  const readCtx = ctx ?? createLocalDemoReadContext();
+  if (!readCtx) return response ?? apiError("AUTHENTICATION_ERROR", "Authentication is required", 401);
+
+  const access = ctx
+    ? await requirePropertyAccess(ctx, id.data)
+    : { role: "landlord" as const, response: null };
   if (access.response) return access.response;
 
   const to = new Date(period.data.to ?? new Date().toISOString());
   const from = new Date(period.data.from ?? new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString());
-  const { data: property, error: propertyError } = await ctx.supabase.from("properties").select("*").eq("id", id.data).single();
+  const { data: property, error: propertyError } = await readCtx.supabase.from("properties").select("*").eq("id", id.data).single();
   if (propertyError) return supabaseError(propertyError);
 
-  const { data: readings, error: readingError } = await ctx.supabase
+  const { data: readings, error: readingError } = await readCtx.supabase
     .from("energy_readings")
     .select("*")
     .eq("property_id", id.data)
@@ -126,7 +149,8 @@ export async function getDashboard(req: NextRequest, propertyId: string) {
     .order("interval_start");
   if (readingError) return supabaseError(readingError);
 
-  const totals = (readings ?? []).reduce(
+  const dashboardReadings = (readings ?? []) as DashboardReading[];
+  const totals = dashboardReadings.reduce(
     (acc, reading) => {
       acc.consumptionKwh += Number(reading.consumption_kwh);
       acc.solarGenerationKwh += Number(reading.solar_generation_kwh);
@@ -138,7 +162,7 @@ export async function getDashboard(req: NextRequest, propertyId: string) {
     { consumptionKwh: 0, solarGenerationKwh: 0, gridImportKwh: 0, gridExportKwh: 0, batterySocPct: null as number | null }
   );
 
-  const { data: tariff } = await ctx.supabase
+  const { data: tariff } = await readCtx.supabase
     .from("energy_tariffs")
     .select("*")
     .eq("property_id", id.data)
@@ -148,16 +172,19 @@ export async function getDashboard(req: NextRequest, propertyId: string) {
     .limit(1)
     .maybeSingle();
 
+  const gridRatePerKwh = tariff
+    ? Number(tariff.grid_rate_cents_per_kwh ?? Number(tariff.usage_rate_per_kwh) * 100) / 100
+    : 0;
   const estimatedCost = tariff
-    ? Math.round((totals.gridImportKwh * Number(tariff.usage_rate_per_kwh) - totals.gridExportKwh * Number(tariff.feed_in_rate_per_kwh)) * 100) / 100
+    ? Math.round((totals.gridImportKwh * gridRatePerKwh - totals.gridExportKwh * Number(tariff.feed_in_rate_per_kwh)) * 100) / 100
     : 0;
   const estimatedSavings = tariff
-    ? Math.round((Math.max(0, totals.solarGenerationKwh - totals.gridExportKwh) * Number(tariff.usage_rate_per_kwh) + totals.gridExportKwh * Number(tariff.feed_in_rate_per_kwh)) * 100) / 100
+    ? Math.round((Math.max(0, totals.solarGenerationKwh - totals.gridExportKwh) * gridRatePerKwh + totals.gridExportKwh * Number(tariff.feed_in_rate_per_kwh)) * 100) / 100
     : 0;
 
   const base = {
     property,
-    viewer: { role: access.role },
+    viewer: { role: access.role, mode: ctx ? "user" : "local_demo_admin_read" },
     period: { from: from.toISOString(), to: to.toISOString(), granularity: period.data.granularity },
     energy: totals,
     financial: { estimatedCost, estimatedSavings, currency: tariff?.currency ?? "AUD" },
@@ -169,9 +196,9 @@ export async function getDashboard(req: NextRequest, propertyId: string) {
   if (access.role === "tenant") return ok(base);
 
   const [{ data: solarAssessment }, { data: pendingPriceAdjustments }, { data: pendingLeaseRequests }] = await Promise.all([
-    ctx.supabase.from("solar_assessments").select("*").eq("property_id", id.data).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-    ctx.supabase.from("price_adjustments").select("*").eq("property_id", id.data).in("status", ["draft", "pending"]),
-    ctx.supabase.from("lease_requests").select("*").eq("property_id", id.data).in("status", ["submitted", "under_review"]),
+    readCtx.supabase.from("solar_assessments").select("*").eq("property_id", id.data).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    readCtx.supabase.from("price_adjustments").select("*").eq("property_id", id.data).in("status", ["draft", "pending"]),
+    readCtx.supabase.from("lease_requests").select("*").eq("property_id", id.data).in("status", ["submitted", "under_review"]),
   ]);
 
   return ok({ ...base, roi: solarAssessment?.estimated_roi_pct ?? null, solarAssessment, currentTariff: tariff, pendingPriceAdjustments, pendingLeaseRequests });
@@ -245,6 +272,7 @@ export async function createTariff(req: NextRequest, propertyId: string) {
     property_id: propertyId,
     name: input.name,
     usage_rate_per_kwh: input.usageRatePerKwh,
+    grid_rate_cents_per_kwh: input.gridRateCentsPerKwh ?? input.usageRatePerKwh * 100,
     feed_in_rate_per_kwh: input.feedInRatePerKwh,
     daily_supply_charge: input.dailySupplyCharge,
     currency: input.currency,

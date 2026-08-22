@@ -53,6 +53,7 @@ def test_demo_project_catalog_exposes_frontend_sponsor_metadata(client):
     project = next(item for item in response.json()["data"] if item["id"] == PROJECT_ID)
     assert project["target_credits"] == "250000.000000"
     assert project["funded_credits"] == "162450.000000"
+    assert project["image_path"] == "/green-projects/illawarra-community-battery.webp"
     assert project["metadata"] == {
         "curated": True,
         "sponsor_name": "BrightGrid Community Fund",

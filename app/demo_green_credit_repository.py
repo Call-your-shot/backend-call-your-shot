@@ -54,6 +54,7 @@ def _project(
     verification_method: str,
     sponsor_name: str,
     sponsor_commitment_dollars: int,
+    image_path: str,
 ) -> dict[str, Any]:
     return {
         "id": project_id,
@@ -62,7 +63,7 @@ def _project(
         "description": description,
         "category": category,
         "location": location,
-        "image_path": None,
+        "image_path": image_path,
         "target_microcredits": _microcredits(target_credits),
         "funded_microcredits": _microcredits(funded_credits),
         "remaining_microcredits": _microcredits(target_credits - funded_credits),
@@ -103,6 +104,7 @@ def _initial_projects() -> dict[UUID, dict[str, Any]]:
             verification_method="Commissioning records and quarterly operator reports",
             sponsor_name="BrightGrid Community Fund",
             sponsor_commitment_dollars=2_500,
+            image_path="/green-projects/illawarra-community-battery.webp",
         ),
         _project(
             project_id=_PROJECT_IDS["housing"],
@@ -122,6 +124,7 @@ def _initial_projects() -> dict[UUID, dict[str, Any]]:
             verification_method="Installer certificates and annual generation reports",
             sponsor_name="Green Horizon Foundation",
             sponsor_commitment_dollars=4_000,
+            image_path="/green-projects/social-housing-solar.webp",
         ),
         _project(
             project_id=_PROJECT_IDS["habitat"],
@@ -141,6 +144,7 @@ def _initial_projects() -> dict[UUID, dict[str, Any]]:
             verification_method="Geotagged planting records and independent completion review",
             sponsor_name="Coast & Country Impact Pool",
             sponsor_commitment_dollars=1_500,
+            image_path="/green-projects/coastal-habitat-restoration.webp",
         ),
     ]
     return {row["id"]: row for row in projects}

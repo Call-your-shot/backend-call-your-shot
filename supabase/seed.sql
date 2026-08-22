@@ -143,7 +143,8 @@ insert into green_credit_programs (
   enabled = excluded.enabled;
 
 insert into green_projects (
-  id, slug, title, description, category, location, target_microcredits,
+  id, slug, title, description, category, location, image_path,
+  target_microcredits,
   minimum_allocation_microcredits, status, impact_unit, expected_impact,
   verification_method, opens_at, closes_at, metadata
 ) values
@@ -154,6 +155,7 @@ insert into green_projects (
     'Support shared battery capacity that helps local households use more renewable electricity.',
     'energy_storage',
     'Illawarra, NSW',
+    '/green-projects/illawarra-community-battery.webp',
     250000000000,
     1000000,
     'open',
@@ -171,6 +173,7 @@ insert into green_projects (
     'Fund rooftop solar installations for households facing energy hardship.',
     'rooftop_solar',
     'New South Wales',
+    '/green-projects/social-housing-solar.webp',
     400000000000,
     1000000,
     'open',
@@ -188,6 +191,7 @@ insert into green_projects (
     'Restore native coastal vegetation and improve habitat resilience.',
     'habitat_restoration',
     'South Coast, NSW',
+    '/green-projects/coastal-habitat-restoration.webp',
     150000000000,
     500000,
     'open',
@@ -204,6 +208,7 @@ on conflict (id) do update set
   target_microcredits = excluded.target_microcredits,
   minimum_allocation_microcredits = excluded.minimum_allocation_microcredits,
   status = excluded.status,
+  image_path = excluded.image_path,
   metadata = excluded.metadata;
 
 select accrue_green_credits(

@@ -5,6 +5,9 @@ __pycache__/
 .pytest_cache/
 .env.local
 
+# Generated docs/artifacts
+docs/
+
 # OS
 .DS_Store
 Thumbs.db

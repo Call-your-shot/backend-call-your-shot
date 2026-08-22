@@ -20,3 +20,19 @@ app.add_middleware(
 )
 
 app.include_router(router)
+
+
+@app.get("/")
+def root() -> dict[str, str]:
+    return {
+        "status": "ok",
+        "service": "energy-platform-fastapi",
+        "docs": "/docs",
+        "health": "/api/health",
+    }
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run("fastapi_app.main:app", host="0.0.0.0", port=int(os.getenv("PORT", "8000")), reload=True)

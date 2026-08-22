@@ -46,3 +46,7 @@ TARIFF = {
     "daily_supply_charge": 1.12,
     "currency": "AUD",
 }
+
+ENERGY_READINGS: list[dict] = []
+TARIFFS: list[dict] = [TARIFF.copy()]
+SOLAR_ASSESSMENTS: list[dict] = []

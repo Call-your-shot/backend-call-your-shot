@@ -10,6 +10,25 @@ def money(value: float) -> float:
     return round(value + 1e-9, 2)
 
 
+DEFAULT_SOLAR_ASSUMPTIONS = {
+    "panelWattageW": 440,
+    "panelAreaM2": 2.0,
+    "usableRoofPercentage": 0.65,
+    "specificAnnualYieldKwhPerKw": 1450,
+    "installationCostPerKw": 1450,
+    "electricityRatePerKwh": 0.34,
+    "feedInRatePerKwh": 0.08,
+    "selfConsumptionRatio": 0.72,
+    "annualDegradationPct": 0.005,
+    "analysisPeriodYears": 20,
+    "gridEmissionsKgPerKwh": 0.68,
+}
+
+
+def _round(value: float, places: int = 2) -> float:
+    return round(value + 1e-9, places)
+
+
 def build_readings(hours: int = 24) -> list[dict]:
     now = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
     start = now - timedelta(hours=hours)
@@ -58,6 +77,28 @@ def build_readings(hours: int = 24) -> list[dict]:
         )
 
     return readings
+
+
+def normalize_reading(payload: dict, property_id: str, reading_id: str) -> dict:
+    battery_soc = payload.get("battery_soc_pct")
+    if battery_soc is None:
+        battery_soc = BATTERY["soc_pct"]
+
+    return {
+        "id": reading_id,
+        "property_id": property_id,
+        "meter_id": str(payload["meter_id"]) if payload.get("meter_id") else None,
+        "interval_start": payload["interval_start"].isoformat(),
+        "interval_end": payload["interval_end"].isoformat(),
+        "consumption_kwh": money(float(payload["consumption_kwh"])),
+        "solar_generation_kwh": money(float(payload["solar_generation_kwh"])),
+        "grid_import_kwh": money(float(payload["grid_import_kwh"])),
+        "grid_export_kwh": money(float(payload["grid_export_kwh"])),
+        "battery_charge_kwh": money(float(payload["battery_charge_kwh"])),
+        "battery_discharge_kwh": money(float(payload["battery_discharge_kwh"])),
+        "battery_soc_pct": money(float(battery_soc)),
+        "source": payload["source"],
+    }
 
 
 def battery_snapshot(readings: list[dict]) -> dict:
@@ -113,4 +154,46 @@ def dashboard_summary(granularity: str) -> dict:
         "sustainability": {"carbonAvoidedKg": money(totals["solarGenerationKwh"] * 0.68)},
         "units": {"energy": "kWh", "currency": "AUD", "carbon": "kgCO2e"},
         "series": readings,
+    }
+
+
+def estimate_solar(input_data: dict) -> dict:
+    assumptions = {**DEFAULT_SOLAR_ASSUMPTIONS, **(input_data.get("assumptions") or {})}
+    roof_area = float(input_data.get("roof_area_m2") or 0)
+    usable_roof_area = input_data.get("usable_roof_area_m2")
+    if usable_roof_area is None:
+        usable_roof_area = max(0.0, roof_area) * float(assumptions["usableRoofPercentage"])
+
+    panel_area = max(float(assumptions["panelAreaM2"]), 0.01)
+    estimated_panel_count = math.floor(float(usable_roof_area) / panel_area)
+    estimated_system_kw = _round((estimated_panel_count * float(assumptions["panelWattageW"])) / 1000)
+    estimated_annual_generation_kwh = _round(estimated_system_kw * float(assumptions["specificAnnualYieldKwhPerKw"]))
+    estimated_installation_cost = _round(estimated_system_kw * float(assumptions["installationCostPerKw"]))
+    self_consumed_kwh = estimated_annual_generation_kwh * float(assumptions["selfConsumptionRatio"])
+    exported_kwh = estimated_annual_generation_kwh - self_consumed_kwh
+    estimated_annual_savings = _round(
+        self_consumed_kwh * float(assumptions["electricityRatePerKwh"])
+        + exported_kwh * float(assumptions["feedInRatePerKwh"])
+    )
+    estimated_payback_years = _round(estimated_installation_cost / estimated_annual_savings) if estimated_annual_savings > 0 else 0
+    lifetime_savings = estimated_annual_savings * float(assumptions["analysisPeriodYears"])
+    estimated_roi_pct = (
+        _round(((lifetime_savings - estimated_installation_cost) / estimated_installation_cost) * 100)
+        if estimated_installation_cost > 0
+        else 0
+    )
+
+    return {
+        "usable_roof_area_m2": _round(float(usable_roof_area)),
+        "estimated_panel_count": estimated_panel_count,
+        "estimated_system_kw": estimated_system_kw,
+        "estimated_annual_generation_kwh": estimated_annual_generation_kwh,
+        "estimated_installation_cost": estimated_installation_cost,
+        "estimated_annual_savings": estimated_annual_savings,
+        "estimated_payback_years": estimated_payback_years,
+        "estimated_roi_pct": estimated_roi_pct,
+        "estimated_carbon_reduction_kg_year": _round(
+            estimated_annual_generation_kwh * float(assumptions["gridEmissionsKgPerKwh"])
+        ),
+        "assumptions": assumptions,
     }

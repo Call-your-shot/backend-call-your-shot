@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Optional
 from uuid import uuid4
 
@@ -22,6 +23,30 @@ def _owner_matches(row: dict, email: str) -> bool:
 
 def _address_label(address: dict) -> str:
     return f"{address['street']}, {address['suburb']}"
+
+
+def _parse_frontend_address(address_text: str) -> dict:
+    cleaned = " ".join(address_text.strip().split())
+    parts = [part.strip() for part in cleaned.split(",") if part.strip()]
+    street = parts[0] if parts else cleaned
+    locality = parts[1] if len(parts) > 1 else ""
+    state = "NSW"
+    postcode = ""
+
+    locality_match = re.match(r"^(?P<suburb>.*?)(?:\s+(?P<state>[A-Z]{2,3}))?(?:\s+(?P<postcode>\d{4}))?$", locality)
+    if locality_match:
+        suburb = (locality_match.group("suburb") or "").strip()
+        state = locality_match.group("state") or state
+        postcode = locality_match.group("postcode") or postcode
+    else:
+        suburb = locality
+
+    return {
+        "street": street,
+        "suburb": suburb,
+        "state": state,
+        "postcode": postcode,
+    }
 
 
 def _create_frontend_notification(
@@ -366,7 +391,6 @@ def acknowledge_property_leave_request(property_id: str, payload: dict) -> dict:
 
 def create_landlord_property(payload: dict) -> dict:
     address_text = payload["address"].strip()
-    parts = [part.strip() for part in address_text.split(",")]
     system_input = payload.get("solar_system") or {}
     property_id = f"prop-{uuid4()}"
     system = None
@@ -390,12 +414,7 @@ def create_landlord_property(payload: dict) -> dict:
         "aliases": [],
         "email": payload["email"].strip().lower(),
         "owner_emails": [payload["email"].strip().lower()],
-        "address": {
-            "street": parts[0],
-            "suburb": parts[1] if len(parts) > 1 else "",
-            "state": "NSW",
-            "postcode": "",
-        },
+        "address": _parse_frontend_address(address_text),
         "image_variant": 0,
         "occupancy_status": "pending_invitation" if payload.get("invite_email") else "vacant",
         "system": system,

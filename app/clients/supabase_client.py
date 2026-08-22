@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from dataclasses import dataclass
 from typing import Any, Optional
 
 import httpx
@@ -26,6 +27,22 @@ class SupabaseRestClient:
     def table(self, table_name: str) -> SupabaseTableRequestBuilder:
         return SupabaseTableRequestBuilder(self.url, table_name, self.headers)
 
+    def from_(self, table_name: str) -> SupabaseTableRequestBuilder:
+        return self.table(table_name)
+
+
+@dataclass
+class SupabaseResponse:
+    data: Any
+    error: Optional[str] = None
+
+    def __getitem__(self, key: str) -> Any:
+        if key == "data":
+            return self.data
+        if key == "error":
+            return self.error
+        raise KeyError(key)
+
 
 class SupabaseTableRequestBuilder:
 
@@ -33,21 +50,47 @@ class SupabaseTableRequestBuilder:
         self.endpoint = f"{base_url}/rest/v1/{table_name}"
         self.headers = headers
 
-    def insert(self, rows: list[dict[str, Any]]) -> dict:
-        try:
-            with httpx.Client(timeout=10.0) as client:
-                res = client.post(self.endpoint, json=rows, headers=self.headers)
-                if res.is_success:
-                    return {"data": res.json(), "error": None}
-                return {"data": None, "error": res.text}
-        except Exception as exc:
-            return {"data": None, "error": str(exc)}
+    def insert(self, rows: list[dict[str, Any]]) -> SupabaseMutationBuilder:
+        return SupabaseMutationBuilder(self.endpoint, self.headers, rows)
 
     def select(self, query: str = "*") -> SupabaseQueryBuilder:
         return SupabaseQueryBuilder(self.endpoint, self.headers, select_fields=query)
 
     def update(self, payload: dict[str, Any]) -> SupabaseQueryBuilder:
         return SupabaseQueryBuilder(self.endpoint, self.headers, update_payload=payload)
+
+
+class SupabaseMutationBuilder:
+    def __init__(self, endpoint: str, headers: dict[str, str], rows: list[dict[str, Any]]):
+        self.endpoint = endpoint
+        self.headers = headers
+        self.rows = rows
+        self._response: Optional[SupabaseResponse] = None
+
+    def execute(self) -> SupabaseResponse:
+        if self._response is not None:
+            return self._response
+        try:
+            with httpx.Client(timeout=10.0) as client:
+                res = client.post(self.endpoint, json=self.rows, headers=self.headers)
+                if res.is_success:
+                    self._response = SupabaseResponse(data=res.json(), error=None)
+                else:
+                    self._response = SupabaseResponse(data=None, error=res.text)
+        except Exception as exc:
+            self._response = SupabaseResponse(data=None, error=str(exc))
+        return self._response
+
+    @property
+    def data(self) -> Any:
+        return self.execute().data
+
+    @property
+    def error(self) -> Optional[str]:
+        return self.execute().error
+
+    def __getitem__(self, key: str) -> Any:
+        return self.execute()[key]
 
 
 class SupabaseQueryBuilder:
@@ -62,7 +105,29 @@ class SupabaseQueryBuilder:
         self.params[column] = f"eq.{value}"
         return self
 
-    def execute(self) -> dict:
+    def neq(self, column: str, value: Any) -> SupabaseQueryBuilder:
+        self.params[column] = f"neq.{value}"
+        return self
+
+    def lt(self, column: str, value: Any) -> SupabaseQueryBuilder:
+        self.params[column] = f"lt.{value}"
+        return self
+
+    def limit(self, value: int) -> SupabaseQueryBuilder:
+        self.params["limit"] = str(value)
+        return self
+
+    def order(self, column: str, desc: bool = False) -> SupabaseQueryBuilder:
+        existing = self.params.get("order")
+        clause = f"{column}.{'desc' if desc else 'asc'}"
+        self.params["order"] = f"{existing},{clause}" if existing else clause
+        return self
+
+    def or_(self, expression: str) -> SupabaseQueryBuilder:
+        self.params["or"] = f"({expression})"
+        return self
+
+    def execute(self) -> SupabaseResponse:
         try:
             with httpx.Client(timeout=10.0) as client:
                 if self.update_payload is not None:
@@ -71,10 +136,10 @@ class SupabaseQueryBuilder:
                     res = client.get(self.endpoint, params=self.params, headers=self.headers)
 
                 if res.is_success:
-                    return {"data": res.json(), "error": None}
-                return {"data": [], "error": res.text}
+                    return SupabaseResponse(data=res.json(), error=None)
+                return SupabaseResponse(data=[], error=res.text)
         except Exception as exc:
-            return {"data": [], "error": str(exc)}
+            return SupabaseResponse(data=[], error=str(exc))
 
 
 def get_supabase_client() -> Optional[SupabaseRestClient]:

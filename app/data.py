@@ -82,7 +82,8 @@ TENANCY_PLANS: list[dict] = [
         "id": "ten-priya-wollongong",
         "email": "tenant@example.com",
         "tenant_name": "Priya Sharma",
-        "property_id": "prop-owned-1",
+        "property_id": "prop-priya-figtree",
+
         "status": "active",
         "address": {
             "street": "12/88 Corrimal Street",
@@ -127,7 +128,9 @@ TENANCY_PLANS: list[dict] = [
 LANDLORD_PROPERTY_VIEWS: list[dict] = [
     {
         "id": "prop-owned-1",
+        "aliases": ["prop-priya-figtree"],
         "email": "landlord@example.com",
+
         "owner_emails": ["owner@example.com", "landlord@example.com"],
         "address": {
             "street": "42 Bellambi Lane",

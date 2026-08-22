@@ -25,11 +25,23 @@ def test_get_tenant_plan_detail_by_email():
 
     assert response.status_code == 200
     data = response.json()
-    assert data["propertyId"] == "prop-owned-1"
+    assert data["propertyId"] == "prop-priya-figtree"
     assert data["ratePerKwhCents"] == 15
     assert data["gridRateCents"] == 29
     assert data["monthly"][0]["solarUsedKwh"] == 200
     assert data["leaveRequest"] is None
+
+
+def test_get_tenant_plan_detail_without_email():
+    response = client.get("/api/plans/ten-priya-wollongong")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == "ten-priya-wollongong"
+    assert data["propertyId"] == "prop-priya-figtree"
+    assert data["landlordName"] == "Coastal Realty Group"
+    assert data["monthly"][0]["savingsDollars"] == 30.0
+
 
 
 def test_list_landlord_properties_by_email():

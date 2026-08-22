@@ -11,6 +11,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from ..demo_green_credit_repository import create_demo_repository
 from ..green_credit_models import (
     AccrualRequest,
     AccrualResponse,
@@ -43,6 +44,16 @@ router = APIRouter(tags=["green credits"])
 bearer = HTTPBearer(auto_error=False)
 
 
+def _demo_email_auth_enabled() -> bool:
+    configured = os.getenv("GREEN_CREDIT_DEMO_AUTH")
+    if configured is not None:
+        return configured.strip().lower() in {"1", "true", "yes", "on"}
+    return os.getenv("APP_ENV", "development").strip().lower() not in {
+        "production",
+        "prod",
+    }
+
+
 def _http_error(error: GreenCreditRepositoryError) -> HTTPException:
     return HTTPException(
         status_code=error.status_code,
@@ -52,19 +63,48 @@ def _http_error(error: GreenCreditRepositoryError) -> HTTPException:
 
 def get_user_green_credit_repository(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
+    email: Annotated[
+        str | None,
+        Query(
+            min_length=3,
+            max_length=254,
+            pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$",
+            description=(
+                "Email-only identity for the local/demo frontend. Production "
+                "clients should send a Supabase bearer token instead."
+            ),
+        ),
+    ] = None,
 ) -> GreenCreditRepository:
-    if credentials is None or credentials.scheme.lower() != "bearer":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={
-                "code": "AUTHENTICATION_ERROR",
-                "message": "A Supabase bearer token is required.",
-            },
-        )
-    try:
-        return create_user_repository(credentials.credentials)
-    except GreenCreditRepositoryError as error:
-        raise _http_error(error) from error
+    if credentials is not None:
+        if credentials.scheme.lower() != "bearer":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={
+                    "code": "AUTHENTICATION_ERROR",
+                    "message": "A valid Supabase bearer token is required.",
+                },
+            )
+        try:
+            return create_user_repository(credentials.credentials)
+        except GreenCreditRepositoryError as error:
+            raise _http_error(error) from error
+
+    if email is not None and _demo_email_auth_enabled():
+        return create_demo_repository(email)
+
+    message = "A Supabase bearer token is required."
+    if _demo_email_auth_enabled():
+        message = "A Supabase bearer token or demo email query parameter is required."
+    elif email is not None:
+        message = "Email-only demo authentication is disabled in this environment."
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail={
+            "code": "AUTHENTICATION_ERROR",
+            "message": message,
+        },
+    )
 
 
 def get_service_green_credit_repository(

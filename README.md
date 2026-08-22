@@ -65,7 +65,7 @@ PYTHONPYCACHEPREFIX=/private/tmp/pycache python3 -m pytest tests
 Current verified status:
 
 ```text
-14 passed
+68 passed
 ```
 
 ## Main Endpoints
@@ -147,6 +147,73 @@ POST /api/properties/{id}/invite
 POST /api/properties/{id}/invite/accept
 GET /api/notifications?email={email}
 ```
+
+Green credits and sponsor-backed projects:
+
+```text
+GET  /api/v1/green-credits/wallet?email={email}
+GET  /api/v1/green-credits/ledger?email={email}
+GET  /api/v1/green-credits/allocations?email={email}
+GET  /api/v1/green-projects?email={email}
+GET  /api/v1/green-projects/{project_id}?email={email}
+POST /api/v1/green-projects/{project_id}/allocations?email={email}
+```
+
+### Green-credit frontend authentication
+
+The green-credit API supports two identity paths behind the same service and
+response models:
+
+- Production clients send `Authorization: Bearer <supabase-access-token>`.
+- The current email-only demo UI sends `?email=<account-email>` while
+  `GREEN_CREDIT_DEMO_AUTH=true`.
+
+A bearer token always takes precedence when both are supplied. Email-only
+identity is disabled automatically when `APP_ENV=production` unless it is
+explicitly re-enabled, and should remain disabled in a real deployment. The
+demo repository is process-local: allocations persist across requests but are
+reset when the API process restarts.
+
+The seeded UI identities are:
+
+```text
+sarah.chen@example.com
+david.marino@example.com
+priya.nair@example.com
+tenant@example.com
+landlord@example.com
+```
+
+Any other valid demo email receives an empty wallet rather than another
+person's credits.
+
+Example frontend reads:
+
+```bash
+curl "http://127.0.0.1:8001/api/v1/green-credits/wallet?email=sarah.chen%40example.com"
+
+curl "http://127.0.0.1:8001/api/v1/green-projects?email=sarah.chen%40example.com"
+```
+
+Example allocation (the idempotency key must be unique per user action):
+
+```bash
+curl -X POST \
+  "http://127.0.0.1:8001/api/v1/green-projects/13131313-1313-4131-8131-131313131313/allocations?email=sarah.chen%40example.com" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "requested_credits": "250.000000",
+    "idempotency_key": "green-ui-20260822-0001"
+  }'
+```
+
+The frontend should treat credit amounts as decimal strings, not binary
+floating-point balances. Wallet responses include `verified_solar_kwh` for the
+reward-summary display. Project sponsor display fields are exposed in each
+project's `metadata` object (`sponsor_name`,
+`sponsor_commitment_dollars`, and `credits_per_sponsor_dollar`). Allocation
+responses return the authoritative new wallet balance, while the wallet,
+ledger, allocation, and project endpoints can be re-fetched after a write.
 
 Workflow:
 

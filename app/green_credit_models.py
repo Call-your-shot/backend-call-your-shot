@@ -16,6 +16,7 @@ class WalletResponse(BaseModel):
     available_credits: str
     lifetime_earned_credits: str
     lifetime_allocated_credits: str
+    verified_solar_kwh: float | None = None
 
 
 class LedgerEntryResponse(BaseModel):

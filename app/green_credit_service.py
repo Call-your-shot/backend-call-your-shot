@@ -33,6 +33,7 @@ def build_wallet(repository: GreenCreditRepository) -> WalletResponse:
             available_credits="0.000000",
             lifetime_earned_credits="0.000000",
             lifetime_allocated_credits="0.000000",
+            verified_solar_kwh=None,
         )
     return WalletResponse(
         account_id=row["account_id"],
@@ -45,6 +46,11 @@ def build_wallet(repository: GreenCreditRepository) -> WalletResponse:
         ),
         lifetime_allocated_credits=microcredits_to_credits(
             _integer(row, "lifetime_allocated_microcredits")
+        ),
+        verified_solar_kwh=(
+            float(row["verified_solar_kwh"])
+            if row.get("verified_solar_kwh") is not None
+            else None
         ),
     )
 

@@ -154,7 +154,7 @@ insert into green_projects (
     'Support shared battery capacity that helps local households use more renewable electricity.',
     'energy_storage',
     'Illawarra, NSW',
-    250000000,
+    250000000000,
     1000000,
     'open',
     'kWh of community storage supported',
@@ -162,7 +162,7 @@ insert into green_projects (
     'Quarterly operator reports and commissioned-capacity evidence',
     now() - interval '7 days',
     now() + interval '180 days',
-    '{"curated":true,"featured":true}'
+    '{"curated":true,"featured":true,"sponsor_name":"BrightGrid Community Fund","sponsor_commitment_dollars":2500,"credits_per_sponsor_dollar":100}'
   ),
   (
     '14141414-1414-4141-8141-141414141414',
@@ -171,7 +171,7 @@ insert into green_projects (
     'Fund rooftop solar installations for households facing energy hardship.',
     'rooftop_solar',
     'New South Wales',
-    400000000,
+    400000000000,
     1000000,
     'open',
     'solar capacity installed (kW)',
@@ -179,7 +179,7 @@ insert into green_projects (
     'Installer certificates, inverter commissioning records, and annual generation reports',
     now() - interval '7 days',
     now() + interval '270 days',
-    '{"curated":true}'
+    '{"curated":true,"sponsor_name":"Green Horizon Foundation","sponsor_commitment_dollars":4000,"credits_per_sponsor_dollar":100}'
   ),
   (
     '15151515-1515-4151-8151-151515151515',
@@ -188,7 +188,7 @@ insert into green_projects (
     'Restore native coastal vegetation and improve habitat resilience.',
     'habitat_restoration',
     'South Coast, NSW',
-    150000000,
+    150000000000,
     500000,
     'open',
     'square metres restored',
@@ -196,7 +196,7 @@ insert into green_projects (
     'Geotagged planting records and independent completion review',
     now() - interval '7 days',
     now() + interval '150 days',
-    '{"curated":true}'
+    '{"curated":true,"sponsor_name":"Coast & Country Impact Pool","sponsor_commitment_dollars":1500,"credits_per_sponsor_dollar":100}'
   )
 on conflict (id) do update set
   title = excluded.title,

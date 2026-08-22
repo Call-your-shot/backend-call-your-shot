@@ -144,6 +144,7 @@ def test_wallet_returns_exact_display_credits(client):
         "available_credits": "8.500000",
         "lifetime_earned_credits": "10.000000",
         "lifetime_allocated_credits": "1.500000",
+        "verified_solar_kwh": None,
     }
 
 

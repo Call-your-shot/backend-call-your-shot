@@ -10,6 +10,9 @@ create table profiles (
 create table properties (
   id uuid primary key default gen_random_uuid(),
   name text not null,
+  primary_address_id uuid,
+  -- Legacy cache fields kept for API compatibility. Canonical address data lives
+  -- in countries, localities, and property_addresses.
   address_line_1 text not null,
   address_line_2 text,
   suburb text not null,
@@ -24,6 +27,42 @@ create table properties (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+create table countries (
+  code text primary key,
+  name text not null unique,
+  created_at timestamptz not null default now(),
+  constraint countries_code_format_check check (code = upper(code) and length(code) between 2 and 3)
+);
+
+create table localities (
+  id uuid primary key default gen_random_uuid(),
+  country_code text not null references countries(code) on delete restrict,
+  state text not null,
+  suburb text not null,
+  postcode text not null,
+  created_at timestamptz not null default now(),
+  constraint localities_unique_location unique (country_code, state, suburb, postcode)
+);
+
+create table property_addresses (
+  id uuid primary key default gen_random_uuid(),
+  property_id uuid not null unique references properties(id) on delete cascade,
+  locality_id uuid not null references localities(id) on delete restrict,
+  address_line_1 text not null,
+  address_line_2 text,
+  latitude numeric,
+  longitude numeric,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table properties
+  add constraint properties_primary_address_fk foreign key (primary_address_id) references property_addresses(id) on delete set null;
+
+create index localities_country_state_idx on localities(country_code, state, suburb);
+create index property_addresses_locality_idx on property_addresses(locality_id);
+create index properties_primary_address_idx on properties(primary_address_id);
 
 create table property_memberships (
   id uuid primary key default gen_random_uuid(),
@@ -57,4 +96,3 @@ create table meters (
 
 create unique index meters_external_provider_uidx on meters(provider, external_meter_id) where external_meter_id is not null;
 create index meters_property_idx on meters(property_id);
-

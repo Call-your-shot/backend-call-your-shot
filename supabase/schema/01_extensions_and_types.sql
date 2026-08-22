@@ -15,4 +15,8 @@ create type contract_type as enum ('ppa', 'lease_amendment', 'energy_agreement')
 create type contract_status as enum ('draft', 'review', 'sent', 'signed', 'cancelled');
 create type energy_control_mode as enum ('automatic', 'self_consumption', 'backup', 'manual');
 create type control_command_status as enum ('queued', 'sent', 'acknowledged', 'failed', 'cancelled');
-
+create type reading_quality_status as enum ('raw', 'validated', 'estimated', 'corrected', 'missing');
+create type solar_installation_status as enum ('planned', 'installed', 'commissioned', 'decommissioned');
+create type pricing_mode as enum ('fixed', 'dynamic');
+create type cashflow_event_category as enum ('tenant_solar_revenue', 'export_revenue', 'maintenance', 'repair', 'replacement', 'rebate', 'adjustment');
+create type cashflow_event_status as enum ('pending', 'posted', 'void');

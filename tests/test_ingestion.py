@@ -2,8 +2,8 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from fastapi_app.main import app
-from fastapi_app.ingestion_service import RAW_TELEMETRY_DB, ingest_raw_telemetry, query_raw_telemetry
+from app.main import app
+from app.utils.ingestion import RAW_TELEMETRY_DB, ingest_raw_telemetry, query_raw_telemetry
 
 client = TestClient(app)
 
@@ -60,7 +60,7 @@ async def test_ingest_raw_telemetry_service():
         }
     ]
 
-    with patch("fastapi_app.ingestion_service.fetch_timeseries_telemetry", new_callable=AsyncMock) as mock_fetch:
+    with patch("app.utils.ingestion.fetch_timeseries_telemetry", new_callable=AsyncMock) as mock_fetch:
         mock_fetch.return_value = mock_packets
 
         res = await ingest_raw_telemetry("2026-08-22", "sunny")
@@ -116,8 +116,8 @@ def test_ingestion_endpoints_flow():
         }
     ]
 
-    with patch("fastapi_app.routers.ingestion.ingest_raw_telemetry", new_callable=AsyncMock) as mock_ingest:
-        from fastapi_app.schemas import IngestTelemetryResponse, TelemetryPacket
+    with patch("app.routers.ingestion.ingest_raw_telemetry", new_callable=AsyncMock) as mock_ingest:
+        from app.schemas import IngestTelemetryResponse, TelemetryPacket
 
         mock_ingest.return_value = IngestTelemetryResponse(
             status="success",

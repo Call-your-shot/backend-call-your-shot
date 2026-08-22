@@ -4,14 +4,14 @@ import httpx
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
-from fastapi_app.main import app
-from fastapi_app.analytics_service import (
+from app.main import app
+from app.analytics_service import (
     get_import_rate,
     parse_timestamp_hour,
     process_telemetry_timeseries,
 )
 
-from fastapi_app.clients.mock_iot_client import fetch_timeseries_telemetry, get_mock_iot_api_url
+from app.clients.mock_iot_client import fetch_timeseries_telemetry, get_mock_iot_api_url
 
 
 client = TestClient(app)
@@ -106,7 +106,7 @@ def test_dashboard_endpoint_success():
         }
     ]
 
-    with patch("fastapi_app.routers.analytics.fetch_timeseries_telemetry", new_callable=AsyncMock) as mock_fetch:
+    with patch("app.routers.analytics.fetch_timeseries_telemetry", new_callable=AsyncMock) as mock_fetch:
 
         mock_fetch.return_value = mock_packets
 

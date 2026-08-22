@@ -1,5 +1,8 @@
 alter table profiles enable row level security;
 alter table properties enable row level security;
+alter table countries enable row level security;
+alter table localities enable row level security;
+alter table property_addresses enable row level security;
 alter table property_memberships enable row level security;
 alter table meters enable row level security;
 alter table energy_readings enable row level security;
@@ -8,6 +11,11 @@ alter table price_adjustments enable row level security;
 alter table bills enable row level security;
 alter table solar_assessments enable row level security;
 alter table solar_products enable row level security;
+alter table solar_installations enable row level security;
+alter table pricing_contracts enable row level security;
+alter table interval_pricing_results enable row level security;
+alter table cashflow_events enable row level security;
+alter table roi_analysis_runs enable row level security;
 alter table lease_requests enable row level security;
 alter table proposals enable row level security;
 alter table contracts enable row level security;
@@ -36,6 +44,13 @@ create policy properties_insert_managers on properties for insert with check (au
 create policy properties_update_managers on properties
   for update using (has_property_role(id, array['landlord', 'agent']::property_member_role[]))
   with check (has_property_role(id, array['landlord', 'agent']::property_member_role[]));
+
+create policy countries_read_authenticated on countries for select using (auth.uid() is not null);
+create policy localities_read_authenticated on localities for select using (auth.uid() is not null);
+create policy property_addresses_select_members on property_addresses for select using (is_property_member(property_id));
+create policy property_addresses_manage_managers on property_addresses
+  for all using (has_property_role(property_id, array['landlord', 'agent']::property_member_role[]))
+  with check (has_property_role(property_id, array['landlord', 'agent']::property_member_role[]));
 
 create policy memberships_select_related on property_memberships
   for select using (user_id = auth.uid() or is_property_member(property_id));
@@ -77,6 +92,46 @@ create policy solar_assessments_manage_managers on solar_assessments
 
 create policy solar_products_read_authenticated on solar_products for select using (auth.uid() is not null and active);
 
+create policy solar_installations_select_members on solar_installations for select using (is_property_member(property_id));
+create policy solar_installations_manage_managers on solar_installations
+  for all using (has_property_role(property_id, array['landlord', 'agent']::property_member_role[]))
+  with check (has_property_role(property_id, array['landlord', 'agent']::property_member_role[]));
+
+create policy pricing_contracts_select_allowed on pricing_contracts for select using (
+  has_property_role(property_id, array['landlord', 'agent']::property_member_role[])
+  or (tenant_id = auth.uid() and is_property_member(property_id))
+);
+create policy pricing_contracts_manage_managers on pricing_contracts
+  for all using (has_property_role(property_id, array['landlord', 'agent']::property_member_role[]))
+  with check (has_property_role(property_id, array['landlord', 'agent']::property_member_role[]));
+
+create policy interval_pricing_results_select_allowed on interval_pricing_results for select using (
+  exists (
+    select 1 from pricing_contracts pc
+    where pc.id = interval_pricing_results.pricing_contract_id
+      and (
+        has_property_role(pc.property_id, array['landlord', 'agent']::property_member_role[])
+        or (pc.tenant_id = auth.uid() and is_property_member(pc.property_id))
+      )
+  )
+);
+
+create policy cashflow_events_select_managers on cashflow_events for select using (
+  exists (
+    select 1 from solar_installations si
+    where si.id = cashflow_events.installation_id
+      and has_property_role(si.property_id, array['landlord', 'agent']::property_member_role[])
+  )
+);
+
+create policy roi_analysis_runs_select_managers on roi_analysis_runs for select using (
+  exists (
+    select 1 from solar_installations si
+    where si.id = roi_analysis_runs.installation_id
+      and has_property_role(si.property_id, array['landlord', 'agent']::property_member_role[])
+  )
+);
+
 create policy lease_requests_select_allowed on lease_requests for select using (
   has_property_role(property_id, array['landlord', 'agent']::property_member_role[])
   or is_request_tenant(property_id, tenant_user_id)
@@ -116,4 +171,3 @@ create policy commands_update_managers on energy_control_commands
 
 create policy audit_logs_select_managers on audit_logs
   for select using (property_id is not null and has_property_role(property_id, array['landlord', 'agent']::property_member_role[]));
-

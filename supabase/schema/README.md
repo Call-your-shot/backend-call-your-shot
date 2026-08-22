@@ -1,6 +1,6 @@
 # Legacy Supabase Schema Layout
 
-This schema is not used by the active backend anymore. The current backend is FastAPI under `backend/fastapi_app/`.
+This schema is not used by the active backend anymore. The current backend is FastAPI under `backend/app/`.
 
 The Supabase files are kept only as a migration archive until they are explicitly deleted.
 

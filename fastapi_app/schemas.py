@@ -238,3 +238,36 @@ class RawTelemetryQueryResponse(ApiModel):
     data: list[TelemetryPacket]
 
 
+class SurveyFormData(ApiModel):
+    address: Optional[str] = None
+    bill_usage_kwh: float = Field(..., ge=0, alias="billUsageKwh")
+    billing_period_start: str = Field(..., alias="billingPeriodStart")
+    billing_period_end: str = Field(..., alias="billingPeriodEnd")
+    bill_total_cost_dollars: Optional[float] = Field(default=None, ge=0, alias="billTotalCostDollars")
+    home_during_day: Optional[Literal["most", "sometimes", "rarely"]] = Field(default="most", alias="homeDuringDay")
+    heating_not_used_this_month: Optional[bool] = Field(default=True, alias="heatingNotUsedThisMonth")
+    heating_hours: Optional[str] = Field(default="2-4", alias="heatingHours")
+    cooling_not_used_this_month: Optional[bool] = Field(default=True, alias="coolingNotUsedThisMonth")
+    cooling_hours: Optional[str] = Field(default="2-4", alias="coolingHours")
+    pool_not_used_this_month: Optional[bool] = Field(default=True, alias="poolNotUsedThisMonth")
+    pool_hours: Optional[str] = Field(default="0-2", alias="poolHours")
+    ev_not_used_this_month: Optional[bool] = Field(default=True, alias="evNotUsedThisMonth")
+    ev_hours: Optional[str] = Field(default="0-2", alias="evHours")
+    hot_water_not_used_this_month: Optional[bool] = Field(default=True, alias="hotWaterNotUsedThisMonth")
+    hot_water_hours: Optional[str] = Field(default="0-2", alias="hotWaterHours")
+
+
+class AnnualEstimationRequest(ApiModel):
+    address: Optional[str] = None
+    scenario: Optional[str] = None
+    target_annual_kwh: Optional[float] = Field(default=None, alias="targetAnnualKwh")
+    target_system_size_kw: Optional[float] = Field(default=6.5, alias="targetSystemSizeKw")
+    form_data: SurveyFormData = Field(..., alias="formData")
+    mock: bool = False
+
+
+class AnnualEstimationResponse(ApiModel):
+    estimated_annual_usage_kwh: float
+
+
+

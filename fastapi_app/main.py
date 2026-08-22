@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .routers.analytics import router as analytics_router
+from .routers.estimation import router as estimation_router
 from .routers.ingestion import router as ingestion_router
 from .routes import router
 
@@ -22,6 +24,9 @@ app.add_middleware(
 
 app.include_router(router)
 app.include_router(ingestion_router)
+app.include_router(analytics_router)
+app.include_router(estimation_router)
+
 
 
 @app.get("/")
@@ -32,7 +37,9 @@ def root() -> dict[str, str]:
         "docs": "/docs",
         "health": "/api/health",
         "ingestion_telemetry": "/api/v1/ingestion/telemetry",
+        "estimate_annual_load": "/api/v1/analytics/estimate-annual-load",
     }
+
 
 
 

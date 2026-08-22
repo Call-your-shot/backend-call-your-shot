@@ -50,10 +50,15 @@ from .user import CreateUserInput, UserResponse
 from .workflow import (
     Contract,
     ContractGenerationInput,
+    HouseApplicationInput,
     LeaseRequest,
     LeaseRequestInput,
+    LeaseRequestStatusUpdate,
+    Notification,
+    NotificationReadUpdate,
     PriceAdjustment,
     PriceAdjustmentInput,
+    TenantLeaveRequestInput,
 )
 
 __all__ = [
@@ -80,15 +85,19 @@ __all__ = [
     "ForecastOnlyResponse",
     "GridMeterTelemetry",
     "HistoricalAnalysisResponse",
+    "HouseApplicationInput",
     "HourlyBreakdownItem",
     "IngestTelemetryResponse",
     "InitialEstimateRequest",
     "InitialEstimateResponse",
     "LeaseRequest",
     "LeaseRequestInput",
+    "LeaseRequestStatusUpdate",
     "ListResponse",
     "MeterIngestionRequest",
     "MeterReadingInput",
+    "Notification",
+    "NotificationReadUpdate",
     "Property",
     "PricingRequest",
     "PricingResult",
@@ -107,6 +116,6 @@ __all__ = [
     "TariffInput",
     "TelemetryPacket",
     "TenantInfo",
+    "TenantLeaveRequestInput",
     "UserResponse",
 ]
-

@@ -140,9 +140,26 @@ GET  /api/properties/{property_id}/price-adjustments
 POST /api/properties/{property_id}/price-adjustments
 GET  /api/properties/{property_id}/lease-requests
 POST /api/properties/{property_id}/lease-requests
+POST /api/properties/{property_id}/lease-requests/leave
+POST /api/properties/{property_id}/house-applications
+PATCH /api/properties/{property_id}/lease-requests/{request_id}/status
+GET  /api/properties/{property_id}/my-plan
+GET  /api/properties/{property_id}/my-properties
+GET  /api/properties/{property_id}/notifications
+PATCH /api/properties/{property_id}/notifications/{notification_id}/read
 GET  /api/properties/{property_id}/contracts
 POST /api/properties/{property_id}/contracts/generate
 ```
+
+Lease request status flow:
+
+```text
+submitted -> under_review -> approved
+submitted -> under_review -> declined
+submitted -> cancelled
+```
+
+When a tenant submits a leave request or new-house application, the landlord receives a notification. When the landlord reviews, approves, or declines it, the tenant receives a status-change notification.
 
 ## Demo Property
 

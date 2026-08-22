@@ -89,6 +89,58 @@ def test_estimate_annual_load_endpoint_live():
     assert data["estimated_annual_usage_kwh"] > 0
 
 
+def test_estimation_schema_accepts_nullable_home_during_day():
+    response = client.post(
+        "/api/v1/analytics/estimate-annual-load",
+        json={
+            "formData": {
+                "address": "64 Corrimal St, Wollongong NSW 2500, Australia",
+                "billUsageKwh": 785,
+                "billingPeriodStart": "2024-03-20",
+                "billingPeriodEnd": "2024-05-20",
+                "billTotalCostDollars": None,
+                "homeDuringDay": None,
+                "heatingNotUsedThisMonth": True,
+                "heatingHours": "2-4",
+                "coolingNotUsedThisMonth": True,
+                "coolingHours": "2-4",
+                "poolNotUsedThisMonth": True,
+                "poolHours": "0-2",
+                "evNotUsedThisMonth": True,
+                "evHours": "0-2",
+                "hotWaterNotUsedThisMonth": True,
+                "hotWaterHours": "0-2",
+            }
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["estimated_annual_usage_kwh"] > 0
+
+
+def test_estimation_schema_rejects_unknown_hours_bucket():
+    response = client.post(
+        "/api/v1/analytics/estimate-annual-load",
+        json={
+            "formData": {
+                "billUsageKwh": 785,
+                "billingPeriodStart": "2024-03-20",
+                "billingPeriodEnd": "2024-05-20",
+                "heatingHours": "all-day",
+            }
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_estimation_openapi_marks_billing_dates_as_date_fields():
+    schema = app.openapi()["components"]["schemas"]["SurveyFormData"]
+
+    assert schema["properties"]["billingPeriodStart"]["format"] == "date"
+    assert schema["properties"]["billingPeriodEnd"]["format"] == "date"
+
+
 def test_invalid_date_ordering():
     payload_json = {
         "formData": {

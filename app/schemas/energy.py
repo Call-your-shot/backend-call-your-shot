@@ -1,12 +1,15 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Literal, Optional, Union
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from .common import ApiModel
+
+
+HoursBucket = Literal["0", "none", "0-2", "2-4", "4-6", "6+"]
 
 
 class Property(ApiModel):
@@ -304,20 +307,20 @@ class RawTelemetryQueryResponse(ApiModel):
 class SurveyFormData(ApiModel):
     address: Optional[str] = None
     bill_usage_kwh: float = Field(..., ge=0, alias="billUsageKwh")
-    billing_period_start: str = Field(..., alias="billingPeriodStart")
-    billing_period_end: str = Field(..., alias="billingPeriodEnd")
+    billing_period_start: date = Field(..., alias="billingPeriodStart")
+    billing_period_end: date = Field(..., alias="billingPeriodEnd")
     bill_total_cost_dollars: Optional[float] = Field(default=None, ge=0, alias="billTotalCostDollars")
     home_during_day: Optional[Literal["most", "sometimes", "rarely"]] = Field(default="most", alias="homeDuringDay")
-    heating_not_used_this_month: Optional[bool] = Field(default=True, alias="heatingNotUsedThisMonth")
-    heating_hours: Optional[str] = Field(default="2-4", alias="heatingHours")
-    cooling_not_used_this_month: Optional[bool] = Field(default=True, alias="coolingNotUsedThisMonth")
-    cooling_hours: Optional[str] = Field(default="2-4", alias="coolingHours")
-    pool_not_used_this_month: Optional[bool] = Field(default=True, alias="poolNotUsedThisMonth")
-    pool_hours: Optional[str] = Field(default="0-2", alias="poolHours")
-    ev_not_used_this_month: Optional[bool] = Field(default=True, alias="evNotUsedThisMonth")
-    ev_hours: Optional[str] = Field(default="0-2", alias="evHours")
-    hot_water_not_used_this_month: Optional[bool] = Field(default=True, alias="hotWaterNotUsedThisMonth")
-    hot_water_hours: Optional[str] = Field(default="0-2", alias="hotWaterHours")
+    heating_not_used_this_month: bool = Field(default=True, alias="heatingNotUsedThisMonth")
+    heating_hours: Optional[HoursBucket] = Field(default="2-4", alias="heatingHours")
+    cooling_not_used_this_month: bool = Field(default=True, alias="coolingNotUsedThisMonth")
+    cooling_hours: Optional[HoursBucket] = Field(default="2-4", alias="coolingHours")
+    pool_not_used_this_month: bool = Field(default=True, alias="poolNotUsedThisMonth")
+    pool_hours: Optional[HoursBucket] = Field(default="0-2", alias="poolHours")
+    ev_not_used_this_month: bool = Field(default=True, alias="evNotUsedThisMonth")
+    ev_hours: Optional[HoursBucket] = Field(default="0-2", alias="evHours")
+    hot_water_not_used_this_month: bool = Field(default=True, alias="hotWaterNotUsedThisMonth")
+    hot_water_hours: Optional[HoursBucket] = Field(default="0-2", alias="hotWaterHours")
 
 
 class AnnualEstimationRequest(ApiModel):

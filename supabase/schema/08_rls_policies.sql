@@ -17,6 +17,7 @@ alter table interval_pricing_results enable row level security;
 alter table cashflow_events enable row level security;
 alter table roi_analysis_runs enable row level security;
 alter table lease_requests enable row level security;
+alter table notifications enable row level security;
 alter table proposals enable row level security;
 alter table contracts enable row level security;
 alter table energy_control_settings enable row level security;
@@ -141,6 +142,19 @@ create policy lease_requests_insert_tenant on lease_requests
 create policy lease_requests_update_reviewers on lease_requests
   for update using (has_property_role(property_id, array['landlord', 'agent']::property_member_role[]))
   with check (has_property_role(property_id, array['landlord', 'agent']::property_member_role[]));
+
+create policy notifications_select_recipient on notifications for select using (
+  recipient_user_id = auth.uid()
+  or (property_id is not null and has_property_role(property_id, array[recipient_role]::property_member_role[]))
+);
+create policy notifications_update_recipient_read on notifications
+  for update using (recipient_user_id = auth.uid())
+  with check (recipient_user_id = auth.uid());
+create policy notifications_insert_members on notifications
+  for insert with check (
+    property_id is null
+    or has_property_role(property_id, array['tenant', 'landlord', 'agent']::property_member_role[])
+  );
 
 create policy proposals_select_allowed on proposals for select using (
   has_property_role(property_id, array['landlord', 'agent']::property_member_role[])

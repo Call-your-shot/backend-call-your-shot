@@ -14,6 +14,7 @@ create trigger contracts_updated_at before update on contracts for each row exec
 create trigger audit_energy_tariffs after insert or update or delete on energy_tariffs for each row execute function audit_row_change();
 create trigger audit_price_adjustments after insert or update or delete on price_adjustments for each row execute function audit_row_change();
 create trigger audit_lease_requests after insert or update or delete on lease_requests for each row execute function audit_row_change();
+create trigger audit_notifications after insert or update or delete on notifications for each row execute function audit_row_change();
 create trigger audit_contracts after insert or update or delete on contracts for each row execute function audit_row_change();
 create trigger audit_energy_control_settings after insert or update or delete on energy_control_settings for each row execute function audit_row_change();
 create trigger audit_energy_control_commands after insert or update or delete on energy_control_commands for each row execute function audit_row_change();

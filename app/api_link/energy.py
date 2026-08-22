@@ -13,6 +13,7 @@ from ..data import (
     PRICE_ADJUSTMENTS,
     PROPERTY,
     PROPERTY_ID,
+    PROPERTIES,
     SOLAR_ASSESSMENTS,
     SOLAR_INSTALLATIONS,
     TARIFF,
@@ -38,7 +39,7 @@ router = APIRouter(prefix="/api", tags=["energy"])
 
 
 def require_property(property_id: str) -> None:
-    if property_id != PROPERTY_ID:
+    if not any(property_row["id"] == property_id for property_row in PROPERTIES):
         raise HTTPException(status_code=404, detail="Property not found")
 
 
@@ -53,13 +54,14 @@ def health() -> dict[str, str]:
 
 @router.get("/properties", response_model=ListResponse)
 def list_properties() -> dict[str, list[Property]]:
-    return {"data": [Property(**PROPERTY)]}
+    return {"data": [Property(**property_row) for property_row in PROPERTIES]}
 
 
 @router.get("/properties/{property_id}", response_model=Property)
 def get_property(property_id: str) -> Property:
     require_property(property_id)
-    return Property(**PROPERTY)
+    property_row = next(row for row in PROPERTIES if row["id"] == property_id)
+    return Property(**property_row)
 
 
 @router.get("/properties/{property_id}/dashboard", response_model=Dashboard)
@@ -69,6 +71,7 @@ def get_dashboard(
     role: Literal["tenant", "landlord", "agent"] = Query("landlord"),
 ) -> dict:
     require_property(property_id)
+    property_row = next(row for row in PROPERTIES if row["id"] == property_id)
     summary = dashboard_summary(granularity)
     energy = summary["energy"]
     financial = summary["financial"]
@@ -107,7 +110,7 @@ def get_dashboard(
             "contracts": [row for row in CONTRACTS if row["property_id"] == property_id],
         }
     return {
-        "property": PROPERTY,
+        "property": property_row,
         "viewer": {"role": role, "mode": "fastapi_demo"},
         **summary,
         "role_panels": role_panels,

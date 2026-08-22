@@ -49,19 +49,69 @@ class PriceAdjustment(ApiModel):
 
 
 class LeaseRequestInput(ApiModel):
-    request_type: str = Field(min_length=1, max_length=120, alias="requestType")
+    request_type: str = Field(default="leave_house", min_length=1, max_length=120, alias="requestType")
     message: str = Field(min_length=1, max_length=5000)
     tenant_user_id: Optional[str] = Field(default=None, alias="tenantUserId")
+    landlord_user_id: Optional[str] = Field(default=None, alias="landlordUserId")
+    requested_move_out_date: Optional[datetime] = Field(default=None, alias="requestedMoveOutDate")
+    proposed_move_in_date: Optional[datetime] = Field(default=None, alias="proposedMoveInDate")
+    target_property_id: Optional[str] = Field(default=None, alias="targetPropertyId")
+
+
+class TenantLeaveRequestInput(ApiModel):
+    message: str = Field(min_length=1, max_length=5000)
+    tenant_user_id: Optional[str] = Field(default=None, alias="tenantUserId")
+    landlord_user_id: Optional[str] = Field(default=None, alias="landlordUserId")
+    requested_move_out_date: Optional[datetime] = Field(default=None, alias="requestedMoveOutDate")
+
+
+class HouseApplicationInput(ApiModel):
+    message: str = Field(min_length=1, max_length=5000)
+    tenant_user_id: Optional[str] = Field(default=None, alias="tenantUserId")
+    landlord_user_id: Optional[str] = Field(default=None, alias="landlordUserId")
+    proposed_move_in_date: Optional[datetime] = Field(default=None, alias="proposedMoveInDate")
 
 
 class LeaseRequest(ApiModel):
     id: str
     property_id: str
     tenant_user_id: Optional[str] = None
+    landlord_user_id: Optional[str] = None
     request_type: str
     message: str
     status: str
+    requested_move_out_date: Optional[str] = None
+    proposed_move_in_date: Optional[str] = None
+    target_property_id: Optional[str] = None
+    reviewed_by_user_id: Optional[str] = None
+    review_notes: Optional[str] = None
     created_at: str
+    updated_at: str
+    status_history: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class LeaseRequestStatusUpdate(ApiModel):
+    status: Literal["under_review", "approved", "declined", "rejected", "cancelled"]
+    reviewed_by_user_id: Optional[str] = Field(default=None, alias="reviewedByUserId")
+    review_notes: Optional[str] = Field(default=None, alias="reviewNotes")
+
+
+class Notification(ApiModel):
+    id: str
+    recipient_user_id: Optional[str] = None
+    recipient_role: str
+    property_id: Optional[str] = None
+    entity_type: str
+    entity_id: str
+    title: str
+    message: str
+    status: Literal["unread", "read"] = "unread"
+    created_at: str
+    read_at: Optional[str] = None
+
+
+class NotificationReadUpdate(ApiModel):
+    status: Literal["read"] = "read"
 
 
 class ContractGenerationInput(ApiModel):

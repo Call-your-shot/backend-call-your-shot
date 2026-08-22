@@ -8,7 +8,7 @@ create type energy_reading_source as enum ('mock', 'meter_api', 'manual', 'simul
 create type adjustment_status as enum ('draft', 'pending', 'approved', 'rejected', 'applied');
 create type bill_status as enum ('draft', 'issued', 'paid', 'overdue', 'cancelled');
 create type solar_assessment_status as enum ('draft', 'completed', 'review_required');
-create type lease_request_status as enum ('submitted', 'under_review', 'approved', 'rejected', 'cancelled');
+create type lease_request_status as enum ('submitted', 'under_review', 'approved', 'declined', 'cancelled');
 create type proposal_type as enum ('solar', 'energy_price', 'ppa', 'lease');
 create type proposal_status as enum ('draft', 'sent', 'accepted', 'rejected', 'expired');
 create type contract_type as enum ('ppa', 'lease_amendment', 'energy_agreement');

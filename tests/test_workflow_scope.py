@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from app.data import PROPERTY_ID
+from app.data import LANDLORD_USER_ID, PROPERTY_ID, TENANT_USER_ID
 from app.main import app
 
 
@@ -62,3 +62,85 @@ def test_price_adjustment_lease_request_and_contract_generation():
     contract = contract_response.json()
     assert contract["contract_type"] == "ppa"
     assert "DRAFT" in contract["document_text"]
+
+
+def test_tenant_leave_request_status_flow_and_notifications():
+    leave_response = client.post(
+        f"/api/properties/{PROPERTY_ID}/lease-requests/leave",
+        json={
+            "tenantUserId": TENANT_USER_ID,
+            "landlordUserId": LANDLORD_USER_ID,
+            "message": "I need to leave at the end of the lease period.",
+            "requestedMoveOutDate": "2026-10-01T00:00:00+00:00",
+        },
+    )
+    assert leave_response.status_code == 201
+    request_body = leave_response.json()
+    assert request_body["request_type"] == "leave_house"
+    assert request_body["status"] == "submitted"
+
+    landlord_notifications = client.get(
+        f"/api/properties/{PROPERTY_ID}/notifications",
+        params={"recipientUserId": LANDLORD_USER_ID},
+    )
+    assert landlord_notifications.status_code == 200
+    assert any(
+        item["entity_id"] == request_body["id"] and item["recipient_role"] == "landlord"
+        for item in landlord_notifications.json()["data"]
+    )
+
+    review_response = client.patch(
+        f"/api/properties/{PROPERTY_ID}/lease-requests/{request_body['id']}/status",
+        json={
+            "status": "approved",
+            "reviewedByUserId": LANDLORD_USER_ID,
+            "reviewNotes": "Approved. Please arrange final inspection.",
+        },
+    )
+    assert review_response.status_code == 200
+    reviewed = review_response.json()
+    assert reviewed["status"] == "approved"
+    assert reviewed["reviewed_by_user_id"] == LANDLORD_USER_ID
+    assert reviewed["status_history"][-1]["status"] == "approved"
+
+    tenant_plan = client.get(
+        f"/api/properties/{PROPERTY_ID}/my-plan",
+        params={"tenantUserId": TENANT_USER_ID},
+    )
+    assert tenant_plan.status_code == 200
+    assert any(item["id"] == request_body["id"] and item["status"] == "approved" for item in tenant_plan.json()["current_requests"])
+    assert any(item["recipient_role"] == "tenant" for item in tenant_plan.json()["notifications"])
+
+
+def test_new_house_application_can_be_declined_and_seen_by_landlord():
+    application_response = client.post(
+        f"/api/properties/{PROPERTY_ID}/house-applications",
+        json={
+            "tenantUserId": TENANT_USER_ID,
+            "landlordUserId": LANDLORD_USER_ID,
+            "message": "I want to apply for this house.",
+            "proposedMoveInDate": "2026-11-01T00:00:00+00:00",
+        },
+    )
+    assert application_response.status_code == 201
+    application = application_response.json()
+    assert application["request_type"] == "new_house_application"
+
+    decline_response = client.patch(
+        f"/api/properties/{PROPERTY_ID}/lease-requests/{application['id']}/status",
+        json={
+            "status": "declined",
+            "reviewedByUserId": LANDLORD_USER_ID,
+            "reviewNotes": "Application declined for this property.",
+        },
+    )
+    assert decline_response.status_code == 200
+    assert decline_response.json()["status"] == "declined"
+
+    landlord_properties = client.get(
+        f"/api/properties/{PROPERTY_ID}/my-properties",
+        params={"landlordUserId": LANDLORD_USER_ID},
+    )
+    assert landlord_properties.status_code == 200
+    property_requests = landlord_properties.json()["properties"][0]["lease_requests"]
+    assert any(item["id"] == application["id"] and item["status"] == "declined" for item in property_requests)

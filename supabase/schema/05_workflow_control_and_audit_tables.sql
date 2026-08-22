@@ -2,13 +2,32 @@ create table lease_requests (
   id uuid primary key default gen_random_uuid(),
   property_id uuid not null references properties(id) on delete cascade,
   tenant_user_id uuid not null references auth.users(id) on delete cascade,
+  landlord_user_id uuid references auth.users(id) on delete set null,
   request_type text not null,
   message text not null,
   status lease_request_status not null default 'submitted',
-  reviewed_by uuid references auth.users(id) on delete set null,
+  requested_move_out_date date,
+  proposed_move_in_date date,
+  target_property_id uuid references properties(id) on delete set null,
+  reviewed_by_user_id uuid references auth.users(id) on delete set null,
   review_notes text,
+  status_history jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
+);
+
+create table notifications (
+  id uuid primary key default gen_random_uuid(),
+  recipient_user_id uuid references auth.users(id) on delete cascade,
+  recipient_role property_member_role not null,
+  property_id uuid references properties(id) on delete cascade,
+  entity_type text not null,
+  entity_id uuid not null,
+  title text not null,
+  message text not null,
+  status text not null default 'unread' check (status in ('unread', 'read')),
+  created_at timestamptz not null default now(),
+  read_at timestamptz
 );
 
 create table proposals (
@@ -83,4 +102,3 @@ create table audit_logs (
 
 create index audit_logs_property_created_idx on audit_logs(property_id, created_at desc);
 create index audit_logs_entity_idx on audit_logs(entity_type, entity_id);
-

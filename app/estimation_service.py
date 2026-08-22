@@ -1,6 +1,6 @@
 import re
-from datetime import datetime
-from typing import Optional
+from datetime import date, datetime
+from typing import Optional, Union
 
 from fastapi import HTTPException, status
 from .schemas import AnnualEstimationRequest, AnnualEstimationResponse, SurveyFormData
@@ -39,13 +39,19 @@ def parse_hours_bucket(hours_str: Optional[str]) -> float:
         return 0.0
 
 
+def parse_billing_date(value: Union[str, date]) -> date:
+    if isinstance(value, date):
+        return value
+    return datetime.strptime(value, "%Y-%m-%d").date()
+
+
 def calculate_annual_energy_estimation(request: AnnualEstimationRequest) -> AnnualEstimationResponse:
     form: SurveyFormData = request.form_data
 
     # Parse billing period start and end dates
     try:
-        start_date = datetime.strptime(form.billing_period_start, "%Y-%m-%d").date()
-        end_date = datetime.strptime(form.billing_period_end, "%Y-%m-%d").date()
+        start_date = parse_billing_date(form.billing_period_start)
+        end_date = parse_billing_date(form.billing_period_end)
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from datetime import datetime, timezone
 from typing import Optional
 from uuid import uuid4
@@ -8,7 +9,7 @@ from uuid import uuid4
 from fastapi import APIRouter, HTTPException, Query, status
 
 from ..clients.supabase_client import get_supabase_client
-from ..data import PROPERTIES, PROPERTY_MEMBERSHIPS, PROPOSALS, TENANT_USER_ID, USERS
+from ..data import DEMO_TODAY, PROPERTIES, PROPERTY_MEMBERSHIPS, PROPOSALS, TENANCY_PLANS, TENANT_USER_ID, USERS
 from ..schemas import ListResponse
 from ..schemas.proposal import (
     AcceptProposalRequest,
@@ -36,14 +37,39 @@ def _proposal_terms(proposal: dict) -> dict:
     }
 
 
+def _parse_address_text(address_text: str) -> dict:
+    cleaned = " ".join(address_text.strip().split())
+    parts = [part.strip() for part in cleaned.split(",") if part.strip()]
+    street = parts[0] if parts else cleaned
+    locality = parts[1] if len(parts) > 1 else ""
+    state = "NSW"
+    postcode = "2500"
+
+    locality_match = re.match(r"^(?P<suburb>.*?)(?:\s+(?P<state>[A-Z]{2,3}))?(?:\s+(?P<postcode>\d{4}))?$", locality)
+    if locality_match:
+        suburb = (locality_match.group("suburb") or "").strip()
+        state = locality_match.group("state") or state
+        postcode = locality_match.group("postcode") or postcode
+    else:
+        suburb = locality
+
+    return {
+        "line1": street or "1 Main St",
+        "suburb": suburb or "Wollongong",
+        "state": state,
+        "postcode": postcode,
+        "fullAddress": cleaned or "1 Main St, Wollongong NSW 2500",
+    }
+
+
 def _extract_property(address_raw: str | AddressModel | dict) -> dict:
     if isinstance(address_raw, str):
-        full_addr = address_raw
-        parts = [p.strip() for p in address_raw.split(",") if p.strip()]
-        line1 = parts[0] if parts else "1 Main St"
-        suburb = parts[1] if len(parts) > 1 else "Wollongong"
-        state = "NSW"
-        postcode = "2500"
+        parsed = _parse_address_text(address_raw)
+        full_addr = parsed["fullAddress"]
+        line1 = parsed["line1"]
+        suburb = parsed["suburb"]
+        state = parsed["state"]
+        postcode = parsed["postcode"]
     elif isinstance(address_raw, AddressModel):
         line1 = address_raw.address_line_1 or address_raw.full_address or "1 Main St"
         suburb = address_raw.suburb or "Wollongong"
@@ -143,6 +169,61 @@ def _proposal_from_supabase(proposal_id_or_token: str) -> ProposalResponse | Non
     )
 
 
+def _upsert_tenant_plan_for_proposal(proposal: dict) -> None:
+    tenant = proposal["tenant"]
+    system = proposal["system"]
+    consumption = proposal["consumption"]
+    property_rec = proposal["property"]
+    tenant_email = tenant["email"].strip().lower()
+    plan_id = proposal["id"]
+    if proposal.get("status") == "accepted":
+        status_value = "active"
+    else:
+        status_value = "awaiting_landlord" if proposal.get("landlord") else "proposal_sent"
+    address = {
+        "street": property_rec.get("address_line_1") or property_rec.get("name") or "Property",
+        "suburb": property_rec.get("suburb") or "",
+        "state": property_rec.get("state") or "NSW",
+        "postcode": property_rec.get("postcode") or "",
+    }
+    plan = {
+        "id": plan_id,
+        "email": tenant_email,
+        "emails": [tenant_email],
+        "tenant_name": tenant["name"],
+        "property_id": property_rec["id"],
+        "proposal_id": proposal["id"],
+        "assessment_id": proposal.get("assessment_id"),
+        "invite_token": proposal.get("invite_token"),
+        "status": status_value,
+        "address": address,
+        "image_variant": 1,
+        "start_date": DEMO_TODAY if status_value == "active" else None,
+        "rate_per_kwh_cents": float(consumption.get("ratePerKwhCents") or consumption.get("rate_per_kwh_cents") or 0),
+        "grid_rate_cents": float(consumption.get("ratePerKwhCents") or consumption.get("rate_per_kwh_cents") or 0),
+        "max_term_years": 9,
+        "monthly_reserve_contribution": 0,
+        "balance_repaid": 0,
+        "balance_total": float(
+            proposal.get("financial_summary", {}).get("netInstallationCostDollars")
+            or proposal.get("financial_summary", {}).get("net_installation_cost_dollars")
+            or 0
+        ),
+        "estimated_completion_date": None,
+        "landlord_name": (proposal.get("landlord") or {}).get("name") or "Property owner",
+        "property_manager": "Property owner",
+        "landlord_agreed_date": DEMO_TODAY if status_value == "active" else None,
+        "system_size_kw": float(system.get("systemSizeKw") or system.get("system_size_kw") or 0),
+        "leave_request": None,
+        "monthly": [],
+    }
+    for index, existing in enumerate(TENANCY_PLANS):
+        if existing.get("proposal_id") == proposal["id"] or existing["id"] == plan_id:
+            TENANCY_PLANS[index] = {**existing, **plan}
+            return
+    TENANCY_PLANS.insert(0, plan)
+
+
 @router.post("/create-proposal", response_model=ProposalResponse, status_code=status.HTTP_201_CREATED)
 @router.post("/api/v1/proposals/create", response_model=ProposalResponse, status_code=status.HTTP_201_CREATED, include_in_schema=False)
 def create_proposal(payload: CreateProposalRequest) -> ProposalResponse:
@@ -219,6 +300,7 @@ def create_proposal(payload: CreateProposalRequest) -> ProposalResponse:
     }
 
     PROPOSALS.append(proposal_rec)
+    _upsert_tenant_plan_for_proposal(proposal_rec)
 
     # Track tenant user
     tenant_email = payload.tenant.email.lower()
@@ -324,6 +406,7 @@ def accept_proposal(proposal_id_or_token: str, payload: AcceptProposalRequest) -
         "status": "active",
         "created_at": now_iso,
     })
+    _upsert_tenant_plan_for_proposal(found_prop)
 
     sb = get_supabase_client()
     if sb:

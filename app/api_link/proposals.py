@@ -91,8 +91,9 @@ def _extract_property(address_raw: str | AddressModel | dict) -> dict:
 
 
 @router.post("/create-proposal", response_model=ProposalResponse, status_code=status.HTTP_201_CREATED)
-@router.post("/api/v1/proposals/create", response_model=ProposalResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/api/v1/proposals/create", response_model=ProposalResponse, status_code=status.HTTP_201_CREATED, include_in_schema=False)
 def create_proposal(payload: CreateProposalRequest) -> ProposalResponse:
+
     property_rec = _extract_property(payload.address)
 
     proposal_id = str(uuid4())
@@ -183,7 +184,7 @@ def create_proposal(payload: CreateProposalRequest) -> ProposalResponse:
 
 
 @router.get("/proposals/{proposal_id_or_token}", response_model=ProposalResponse)
-@router.get("/api/v1/proposals/{proposal_id_or_token}", response_model=ProposalResponse)
+@router.get("/api/v1/proposals/{proposal_id_or_token}", response_model=ProposalResponse, include_in_schema=False)
 def get_proposal(proposal_id_or_token: str) -> ProposalResponse:
     # Memory lookup
     for p in PROPOSALS:
@@ -223,8 +224,9 @@ def get_proposal(proposal_id_or_token: str) -> ProposalResponse:
 
 
 @router.post("/proposals/{proposal_id_or_token}/accept", response_model=ProposalResponse)
-@router.post("/api/v1/proposals/{proposal_id_or_token}/accept", response_model=ProposalResponse)
+@router.post("/api/v1/proposals/{proposal_id_or_token}/accept", response_model=ProposalResponse, include_in_schema=False)
 def accept_proposal(proposal_id_or_token: str, payload: AcceptProposalRequest) -> ProposalResponse:
+
     found_prop = None
     for p in PROPOSALS:
         if p["id"] == proposal_id_or_token or p.get("invite_token") == proposal_id_or_token:

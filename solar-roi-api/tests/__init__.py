@@ -1,0 +1,1 @@
+"""Solar ROI API tests."""

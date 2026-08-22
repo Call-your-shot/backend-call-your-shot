@@ -1,9 +1,10 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from fastapi_app.estimation_service import parse_hours_bucket, calculate_annual_energy_estimation
-from fastapi_app.main import app
-from fastapi_app.schemas import AnnualEstimationRequest, SurveyFormData
+from app.estimation_service import parse_hours_bucket, calculate_annual_energy_estimation
+from app.main import app
+from app.schemas import AnnualEstimationRequest, SurveyFormData
+
 
 client = TestClient(app)
 

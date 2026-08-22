@@ -47,3 +47,38 @@ def valid_payload() -> dict:
 @pytest.fixture
 def copy_payload():
     return deepcopy
+
+
+@pytest.fixture
+def initial_estimate_payload() -> dict:
+    return {
+        "installation": {
+            "gross_installation_cost_dollars": 9000,
+            "stc_benefit_dollars": 1500,
+            "installed_capacity_kw": 6.6,
+        },
+        "simulation": {
+            "iterations": 100,
+            "forecast_years": 20,
+            "random_seed": 42,
+        },
+        "generation": {
+            "expected_annual_generation_kwh": 9108,
+            "annual_variability_percentage": 10,
+        },
+        "tenant_demand": {
+            "expected_annual_usage_kwh": 6500,
+            "annual_usage_variability_percentage": 15,
+        },
+        "solar_utilisation": {
+            "expected_self_consumption_ratio": 0.55,
+            "minimum_self_consumption_ratio": 0.35,
+            "maximum_self_consumption_ratio": 0.75,
+        },
+        "pricing": {
+            "pricing_mode": "dynamic",
+            "grid_rate_cents_per_kwh": 30,
+            "export_rate_cents_per_kwh": 5,
+        },
+        "costs": {"annual_operating_cost_dollars": 100},
+    }

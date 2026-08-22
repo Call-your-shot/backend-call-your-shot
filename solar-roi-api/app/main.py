@@ -11,8 +11,11 @@ from .models import (
     ForecastOnlyResponse,
     HealthResponse,
     HistoricalAnalysisResponse,
+    InitialEstimateRequest,
+    InitialEstimateResponse,
     SummaryResponse,
 )
+from .monte_carlo import run_monte_carlo_roi
 from .service import (
     analyse_roi,
     build_forecast_response,
@@ -94,3 +97,19 @@ def forecast(request: AnalysisRequest) -> ForecastOnlyResponse:
 )
 def history_analysis(request: AnalysisRequest) -> HistoricalAnalysisResponse:
     return build_history_response(request)
+
+
+@app.post(
+    "/api/v1/roi/estimate-initial",
+    response_model=InitialEstimateResponse,
+    tags=["roi"],
+    summary="Estimate initial ROI with Monte Carlo simulation",
+    description=(
+        "For new or pre-installation systems with little or no operating history. "
+        "Creates bounded, assumption-based future paths and returns simulation "
+        "percentiles and a forecast interval—not a statistical confidence interval. "
+        "The historical ROI endpoints and dynamic pricing service remain separate."
+    ),
+)
+def estimate_initial(request: InitialEstimateRequest) -> InitialEstimateResponse:
+    return run_monte_carlo_roi(request)

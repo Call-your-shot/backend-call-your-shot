@@ -121,3 +121,66 @@ def test_openapi_exposes_all_roi_routes() -> None:
     assert "/api/v1/roi/summary" in paths
     assert "/api/v1/roi/forecast" in paths
     assert "/api/v1/roi/history-analysis" in paths
+    assert "/api/v1/roi/estimate-initial" in paths
+
+
+def test_initial_estimate_dynamic_request(initial_estimate_payload: dict) -> None:
+    response = request("POST", "/api/v1/roi/estimate-initial", initial_estimate_payload)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["forecast_source"] == "assumption_based"
+    assert body["simulation"]["iterations"] == 100
+    assert body["headline"]["median_payback_years"] is not None
+    assert body["forecast_interval"]["level"] == 90
+
+
+def test_initial_estimate_fixed_request(initial_estimate_payload: dict) -> None:
+    payload = deepcopy(initial_estimate_payload)
+    payload["pricing"].update(
+        {
+            "pricing_mode": "fixed",
+            "fixed_tenant_solar_rate_cents_per_kwh": 15,
+        }
+    )
+    response = request("POST", "/api/v1/roi/estimate-initial", payload)
+    assert response.status_code == 200
+    assert response.json()["assumptions"]["pricing_mode"] == "fixed"
+
+
+def test_initial_estimate_seed_is_reproducible(initial_estimate_payload: dict) -> None:
+    first = request(
+        "POST", "/api/v1/roi/estimate-initial", initial_estimate_payload
+    ).json()
+    second = request(
+        "POST", "/api/v1/roi/estimate-initial", initial_estimate_payload
+    ).json()
+    assert first == second
+
+
+def test_initial_estimate_rejects_invalid_distribution(
+    initial_estimate_payload: dict,
+) -> None:
+    payload = deepcopy(initial_estimate_payload)
+    payload["generation"]["annual_variability_percentage"] = -1
+    response = request("POST", "/api/v1/roi/estimate-initial", payload)
+    assert response.status_code == 422
+
+
+def test_initial_estimate_rejects_invalid_self_consumption(
+    initial_estimate_payload: dict,
+) -> None:
+    payload = deepcopy(initial_estimate_payload)
+    payload["solar_utilisation"]["minimum_self_consumption_ratio"] = 0.8
+    response = request("POST", "/api/v1/roi/estimate-initial", payload)
+    assert response.status_code == 422
+
+
+def test_initial_estimate_no_payback(initial_estimate_payload: dict) -> None:
+    payload = deepcopy(initial_estimate_payload)
+    payload["pricing"].update(
+        {"grid_rate_cents_per_kwh": 0, "export_rate_cents_per_kwh": 0}
+    )
+    payload["costs"]["annual_operating_cost_dollars"] = 0
+    response = request("POST", "/api/v1/roi/estimate-initial", payload)
+    assert response.status_code == 200
+    assert response.json()["probability_no_payback_within_horizon"] == 1

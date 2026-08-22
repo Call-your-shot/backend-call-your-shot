@@ -9,9 +9,10 @@ capital recovery, historical performance, and payback forecasting. It answers:
 - When should the system pay itself back?
 - How does payback change under conservative, expected, and optimistic assumptions?
 
-The implementation is deterministic. It uses calendar-month averages, standard
-Python mathematics, and explicit assumptions—no machine learning, database, or
-external tariff API.
+Historical forecasting remains deterministic. Initial estimates use an explicitly
+assumption-based Monte Carlo model with reproducible seeds and bounded physical
+variables. Neither mode uses machine learning, a database, or an external tariff
+API.
 
 ## Pricing-service boundary
 
@@ -53,21 +54,27 @@ solar-roi-api/
 │   ├── __init__.py
 │   ├── analytics.py      # history, seasonality, trends, warnings
 │   ├── config.py         # configurable defaults and scenarios
+│   ├── distributions.py  # bounded sampling, percentiles, rank correlation
 │   ├── forecasting.py    # deterministic monthly projections/payback
 │   ├── main.py           # thin FastAPI transport layer
 │   ├── models.py         # Pydantic v2 request/response contracts
+│   ├── monte_carlo.py     # assumption-based initial ROI simulation
 │   ├── roi.py            # pure financial calculations
 │   ├── scenarios.py      # scenario orchestration
 │   ├── service.py        # shared application orchestration
 │   └── utils.py          # date and display helpers
 ├── examples/
 │   ├── example-request.json
-│   └── example-summary-response.json
+│   ├── example-summary-response.json
+│   ├── example-initial-estimate-request.json
+│   └── example-initial-estimate-response.json
 ├── tests/
 │   ├── conftest.py
 │   ├── test_analytics.py
 │   ├── test_api.py
 │   ├── test_forecasting.py
+│   ├── test_distributions.py
+│   ├── test_monte_carlo.py
 │   └── test_roi.py
 ├── .gitignore
 ├── .python-version
@@ -112,6 +119,7 @@ pytest -v
 | `POST` | `/api/v1/roi/summary` | Primary business metrics only |
 | `POST` | `/api/v1/roi/forecast` | Future timeline, assumptions, payback, and scenarios |
 | `POST` | `/api/v1/roi/history-analysis` | Historical energy, financial, yield, seasonality, and trend metrics |
+| `POST` | `/api/v1/roi/estimate-initial` | Assumption-based Monte Carlo estimate for new systems without history |
 
 All endpoints reuse the same domain engine; financial logic is not duplicated.
 
@@ -139,6 +147,129 @@ The complete request is in
 [`examples/example-request.json`](examples/example-request.json), and a calculated
 summary response is in
 [`examples/example-summary-response.json`](examples/example-summary-response.json).
+
+Initial Monte Carlo estimate:
+
+```bash
+curl --fail --show-error \
+  -X POST http://127.0.0.1:8000/api/v1/roi/estimate-initial \
+  -H 'Content-Type: application/json' \
+  --data @examples/example-initial-estimate-request.json
+```
+
+See the complete [initial-estimate request](examples/example-initial-estimate-request.json)
+and its calculated [response](examples/example-initial-estimate-response.json).
+
+## Initial assumption-based Monte Carlo estimate
+
+`POST /api/v1/roi/estimate-initial` is intentionally separate from the historical
+endpoints. It is for new systems, pre-installation feasibility, or cases with too
+little operating history to build a seasonal historical forecast. Its
+`forecast_source` is always `assumption_based`.
+
+Instead of pretending one future outcome is certain, the service creates
+thousands of plausible versions of the future. Each path varies:
+
+- solar generation;
+- tenant demand;
+- solar-demand overlap/self-consumption;
+- grid and export tariffs when variability is requested;
+- operating cost.
+
+It applies monthly seasonal profiles, panel degradation, optional tariff and
+usage growth, tenant/export revenue, and operating costs. Each path tracks
+monthly cumulative cash flow and estimates fractional-month payback.
+
+### Bounded assumptions
+
+- Generation uses a normal distribution truncated to configurable lower and
+  upper multipliers. It cannot become negative or exceed those bounds.
+- Usage, tariffs, and operating costs use non-negative truncated normals.
+- Self-consumption uses a triangular distribution defined by plausible minimum,
+  most-likely, and maximum values, all constrained to `[0, 1]`.
+- Tenant solar consumption is `min(generation × SCR, tenant demand)`.
+- Exports are `generation - tenant solar consumption`; the energy balance is
+  preserved in every simulation.
+- Grid/export tariffs are resampled when export would exceed grid price.
+
+The configurable default generation and demand profiles live in `app/config.py`.
+Custom profiles must contain 12 non-negative weights summing to one. Missing
+months are therefore not silently inferred from historical observations; these
+are disclosed forward-looking assumptions.
+
+### Pricing approximation
+
+This service does not call or reproduce the separate pricing service. For an
+initial dynamic-pricing estimate it uses the compatible equation:
+
+```text
+alpha(q) = alpha_min + (alpha_max - alpha_min) * exp(-k * q)
+tenant rate = export rate + alpha(q) * (grid rate - export rate)
+```
+
+Annual tenant solar consumption is normalised to representative usage with:
+
+```text
+q = annual tenant solar consumption / (365 * active solar-use hours per day)
+```
+
+The default is six active hours. A direct interval-usage override is supported.
+This approximation is designed to be replaced later by real smart-meter interval
+output from the pricing service. Alternatively, `alpha_estimation_mode` can be
+`triangular`, in which case the alpha assumption is explicitly sampled.
+
+Fixed pricing uses the supplied fixed tenant solar rate. In either mode, only
+tenant solar revenue and feed-in-tariff revenue belong to the owner. Grid energy
+purchased by the tenant is never counted as owner revenue.
+
+### Interpreting results
+
+The response reports P05, P25, P50, P75, and P95 plus mean, median, standard
+deviation, minimum, and maximum. The median (P50) is the headline because
+simulated payback can be skewed. P05–P95 is labelled a **90% forecast interval**.
+
+For the checked-in example request, the calculated output is approximately:
+
+```text
+Median payback: 7.83 years
+Mean payback: 7.87 years
+90% forecast interval: 7.10–8.91 years
+Probability of payback within 7 years: 2.22%
+Probability of payback within 10 years: 99.97%
+```
+
+This does **not** mean there is 90% statistical confidence that an unknown true
+payback parameter lies in that range. It means 90% of simulated outcomes that
+reached payback, under the supplied distributions and financial model, fell
+between P05 and P95. The separate no-payback probability includes every
+simulation that did not recover its cost within the horizon.
+
+The response also supplies distributions for first-year generation, demand,
+self-consumption, tenant solar consumption, exports, tenant/export revenue,
+operating cost, annual cash flow, and cumulative ROI. A compact histogram and
+annual CDF are ready for frontend charts.
+
+### Sensitivity
+
+Spearman rank correlations estimate which sampled first-year assumptions are
+most associated with payback. Results are ranked by absolute influence. A
+negative correlation means higher values tend to shorten payback; a positive
+one means higher values tend to lengthen it. This is an association within the
+simulation model, not proof of causation.
+
+### Choosing a forecast source
+
+The domain vocabulary supports a future transition without automatic switching:
+
+```text
+No history      -> assumption_based Monte Carlo estimate
+Some history    -> future hybrid mode
+Enough history  -> historical seasonal forecast
+```
+
+No Bayesian updating or hybrid inference is implemented yet. Observed seasonal
+generation, self-consumption, exports, and payment behavior can later replace
+the corresponding assumptions through the cleanly separated model boundary.
 
 ## Input rules
 

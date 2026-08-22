@@ -107,20 +107,20 @@ TENANCY_PLANS: list[dict] = [
         "leave_request": None,
         "monthly": [
             {
-                "month": "Jul 2026",
-                "solarUsedKwh": 200,
-                "gridUsedKwh": 205,
-                "chargeDollars": 30.0,
-                "withoutSolarDollars": 58.0,
-                "savingsDollars": 30.0,
+                "month": "Jul 2025",
+                "solarUsedKwh": 190,
+                "gridUsedKwh": 210,
+                "chargeDollars": 28.5,
+                "withoutSolarDollars": 116.0,
+                "savingsDollars": 24.7,
             },
             {
-                "month": "Aug 2026",
-                "solarUsedKwh": 214,
-                "gridUsedKwh": 198,
-                "chargeDollars": 32.1,
-                "withoutSolarDollars": 74.7,
-                "savingsDollars": 42.6,
+                "month": "Aug 2025",
+                "solarUsedKwh": 210,
+                "gridUsedKwh": 195,
+                "chargeDollars": 31.5,
+                "withoutSolarDollars": 117.5,
+                "savingsDollars": 26.3,
             },
         ],
     }
@@ -151,11 +151,7 @@ LANDLORD_PROPERTY_VIEWS: list[dict] = [
             "currentOutputKw": 3.2,
             "performancePercent": 96,
             "lastReadingAt": "2026-08-21T14:30:00+10:00",
-            "dailyOutputKwh30d": [
-                22.4, 23.1, 20.8, 24.6, 25.0, 18.9, 21.7, 23.8, 24.2, 22.9,
-                19.4, 20.1, 21.5, 25.6, 26.2, 24.9, 23.3, 22.0, 21.1, 19.8,
-                20.7, 22.8, 23.4, 24.1, 25.3, 26.0, 24.6, 23.7, 22.5, 24.6,
-            ],
+            "dailyOutputKwh30d": [22.4, 23.1],
             "serviceHistory": [
                 {"date": "2025-08-01", "description": "Annual inspection & panel clean"}
             ],
@@ -177,14 +173,6 @@ LANDLORD_PROPERTY_VIEWS: list[dict] = [
                 "contributionToBalance": 948,
                 "current": True,
             },
-            {
-                "name": "Ben Carter",
-                "tenancyStart": "2023-02-01",
-                "tenancyEnd": "2024-10-15",
-                "ratePerKwhCents": 14,
-                "contributionToBalance": 1866,
-                "current": False,
-            },
         ],
         "monthly_income": 428,
         "balance_outstanding": 3985,
@@ -193,7 +181,15 @@ LANDLORD_PROPERTY_VIEWS: list[dict] = [
         "total_invested": 6700,
         "monthly": [
             {
-                "month": "Aug 2026",
+                "month": "Jul 2025",
+                "generationKwh": 640,
+                "tenantChargeCollected": 62.1,
+                "exportCredits": 10.8,
+                "reserveContribution": 18,
+                "netIncome": 54.9,
+            },
+            {
+                "month": "Aug 2025",
                 "generationKwh": 712,
                 "tenantChargeCollected": 69.4,
                 "exportCredits": 12.5,

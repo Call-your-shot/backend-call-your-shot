@@ -14,7 +14,7 @@ def test_list_tenant_plans_by_email():
     assert "plans" in data
     assert data["plans"][0]["id"] == "ten-priya-wollongong"
     assert data["plans"][0]["address"]["suburb"] == "Wollongong"
-    assert data["plans"][0]["lastMonth"]["savingsDollars"] == 42.6
+    assert data["plans"][0]["lastMonth"]["savingsDollars"] == 26.3
 
 
 def test_get_tenant_plan_detail_by_email():
@@ -28,7 +28,9 @@ def test_get_tenant_plan_detail_by_email():
     assert data["propertyId"] == "prop-priya-figtree"
     assert data["ratePerKwhCents"] == 15
     assert data["gridRateCents"] == 29
-    assert data["monthly"][0]["solarUsedKwh"] == 200
+    assert data["monthly"][0]["month"] == "Jul 2025"
+    assert data["monthly"][0]["solarUsedKwh"] == 190
+    assert data["monthly"][1]["savingsDollars"] == 26.3
     assert data["leaveRequest"] is None
 
 
@@ -40,7 +42,7 @@ def test_get_tenant_plan_detail_without_email():
     assert data["id"] == "ten-priya-wollongong"
     assert data["propertyId"] == "prop-priya-figtree"
     assert data["landlordName"] == "Coastal Realty Group"
-    assert data["monthly"][0]["savingsDollars"] == 30.0
+    assert data["monthly"][0]["savingsDollars"] == 24.7
 
 
 
@@ -64,8 +66,11 @@ def test_get_landlord_property_detail_by_email():
     assert response.status_code == 200
     data = response.json()
     assert data["system"]["sizeKw"] == 7.9
-    assert len(data["system"]["dailyOutputKwh30d"]) == 30
+    assert data["system"]["dailyOutputKwh30d"] == [22.4, 23.1]
     assert data["currentTenant"]["name"] == "Amelia Rossi"
+    assert len(data["tenantHistory"]) == 1
+    assert data["monthly"][0]["month"] == "Jul 2025"
+    assert data["monthly"][0]["netIncome"] == 54.9
     assert data["maintenanceReserve"]["nextCostDescription"] == "Inverter replacement"
     assert data["leaveRequest"] is None
 
@@ -80,8 +85,16 @@ def test_dashboard_combines_tenant_and_owner_views_by_email():
     assert tenant_response.status_code == 200
     tenant_dashboard = tenant_response.json()
     assert tenant_dashboard["tenancies"][0]["id"] == "ten-priya-wollongong"
+    assert tenant_dashboard["tenancies"][0]["propertyId"] == "prop-priya-figtree"
     assert tenant_dashboard["tenancies"][0]["ratePerKwhCents"] == 15
-    assert tenant_dashboard["tenancies"][0]["monthly"][0]["solarUsedKwh"] == 200
+    assert tenant_dashboard["tenancies"][0]["monthly"][0] == {
+        "month": "Jul 2025",
+        "solarUsedKwh": 190,
+        "gridUsedKwh": 210,
+        "chargeDollars": 28.5,
+        "withoutSolarDollars": 116.0,
+        "savingsDollars": 24.7,
+    }
     assert tenant_dashboard["ownedProperties"] == []
 
     owner_response = client.get("/api/dashboard", params={"email": "owner@example.com"})
@@ -90,7 +103,16 @@ def test_dashboard_combines_tenant_and_owner_views_by_email():
     assert owner_dashboard["tenancies"] == []
     assert owner_dashboard["ownedProperties"][0]["id"] == "prop-owned-1"
     assert owner_dashboard["ownedProperties"][0]["system"]["sizeKw"] == 7.9
+    assert owner_dashboard["ownedProperties"][0]["system"]["dailyOutputKwh30d"] == [22.4, 23.1]
     assert owner_dashboard["ownedProperties"][0]["currentTenant"]["name"] == "Amelia Rossi"
+    assert owner_dashboard["ownedProperties"][0]["monthly"][0] == {
+        "month": "Jul 2025",
+        "generationKwh": 640,
+        "tenantChargeCollected": 62.1,
+        "exportCredits": 10.8,
+        "reserveContribution": 18,
+        "netIncome": 54.9,
+    }
 
 
 def test_dashboard_unknown_email_returns_empty_sections():

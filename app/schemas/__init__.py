@@ -36,7 +36,17 @@ from .roi import (
     InitialEstimateResponse,
     SummaryResponse,
 )
+from .proposal import (
+    AcceptProposalRequest,
+    AddressModel,
+    ConsumptionInfo,
+    CreateProposalRequest,
+    ProposalResponse,
+    SystemInfo,
+    TenantInfo,
+)
 from .user import CreateUserInput, UserResponse
+
 from .workflow import (
     Contract,
     ContractGenerationInput,
@@ -47,6 +57,8 @@ from .workflow import (
 )
 
 __all__ = [
+    "AcceptProposalRequest",
+    "AddressModel",
     "ApiModel",
     "AnalysisRequest",
     "AnalysisResponse",
@@ -56,8 +68,10 @@ __all__ = [
     "BatteryBMSTelemetry",
     "BatchPricingRequest",
     "BatchPricingResponse",
+    "ConsumptionInfo",
     "Contract",
     "ContractGenerationInput",
+    "CreateProposalRequest",
     "CreateUserInput",
     "Dashboard",
     "DashboardAnalyticsResponse",
@@ -80,6 +94,7 @@ __all__ = [
     "PricingResult",
     "PriceAdjustment",
     "PriceAdjustmentInput",
+    "ProposalResponse",
     "RawTelemetryQueryResponse",
     "SolarAssessmentInput",
     "SolarInstallation",
@@ -87,8 +102,11 @@ __all__ = [
     "SolarInverterTelemetry",
     "SummaryResponse",
     "SurveyFormData",
+    "SystemInfo",
     "Tariff",
     "TariffInput",
     "TelemetryPacket",
+    "TenantInfo",
     "UserResponse",
 ]
+

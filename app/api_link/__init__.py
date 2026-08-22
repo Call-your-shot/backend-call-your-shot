@@ -4,6 +4,7 @@ from .estimation import router as estimation_router
 from .green_credits import router as green_credits_router
 from .ingestion import router as ingestion_router
 from .pricing import router as pricing_router
+from .proposals import router as proposal_router
 from .roi import router as roi_router
 from .users import router as user_router
 from .workflow import router as workflow_router
@@ -15,7 +16,9 @@ __all__ = [
     "green_credits_router",
     "ingestion_router",
     "pricing_router",
+    "proposal_router",
     "roi_router",
     "user_router",
     "workflow_router",
 ]
+

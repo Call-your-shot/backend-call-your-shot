@@ -1,4 +1,4 @@
-from __future__ import annotations
+from typing import Optional
 
 from fastapi import APIRouter, Query
 
@@ -14,8 +14,9 @@ def list_plans(email: str = Query(..., min_length=3)) -> dict:
 
 
 @router.get("/{plan_id}")
-def get_plan(plan_id: str, email: str = Query(..., min_length=3)) -> dict:
+def get_plan(plan_id: str, email: Optional[str] = Query(None)) -> dict:
     return get_tenancy_plan(plan_id, email)
+
 
 
 @router.post("/{plan_id}/leave")

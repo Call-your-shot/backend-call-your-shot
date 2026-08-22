@@ -87,6 +87,11 @@ def normalize_reading(payload: dict, property_id: str, reading_id: str) -> dict:
         "quality_status": payload.get("quality_status") or "raw",
         "raw_packet_id": str(payload["raw_packet_id"]) if payload.get("raw_packet_id") else None,
         "source": payload["source"],
+        "finalized_at": (
+            payload["finalized_at"].isoformat()
+            if payload.get("finalized_at") is not None
+            else None
+        ),
     }
 
 

@@ -68,6 +68,7 @@ class EnergyReading(ApiModel):
     quality_status: str = "estimated"
     raw_packet_id: Optional[str] = None
     source: str
+    finalized_at: Optional[str] = None
 
 
 class EnergyReadingInput(ApiModel):
@@ -86,11 +87,27 @@ class EnergyReadingInput(ApiModel):
     quality_status: Literal["raw", "validated", "estimated", "corrected", "missing"] = Field(default="raw", alias="qualityStatus")
     raw_packet_id: Optional[UUID] = Field(default=None, alias="rawPacketId")
     source: Literal["mock", "meter_api", "manual", "simulation"] = "manual"
+    finalized_at: Optional[datetime] = Field(default=None, alias="finalizedAt")
 
     @model_validator(mode="after")
     def check_interval(self) -> "EnergyReadingInput":
         if self.interval_end <= self.interval_start:
             raise ValueError("intervalEnd must be after intervalStart")
+        if (
+            self.solar_consumed_by_tenant_kwh is not None
+            and self.solar_consumed_by_tenant_kwh > self.consumption_kwh + 0.001
+        ):
+            raise ValueError(
+                "solarConsumedByTenantKwh cannot exceed interval consumption"
+            )
+        if (
+            self.solar_consumed_by_tenant_kwh is not None
+            and self.solar_consumed_by_tenant_kwh
+            > self.solar_generation_kwh + 0.001
+        ):
+            raise ValueError(
+                "solarConsumedByTenantKwh cannot exceed interval solar generation"
+            )
         return self
 
 

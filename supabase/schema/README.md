@@ -20,3 +20,4 @@ The deployable migration files still live in `backend/supabase/migrations/`. Kee
 - `08_rls_policies.sql`: row-level security enables and policies.
 - `09_storage.sql`: storage buckets and object policies.
 - `10_grid_rate_patch.sql`: follow-up migration for `grid_rate_cents_per_kwh`.
+- `11_green_credits.sql`: verified-solar rewards, immutable wallets, curated projects, RLS, and transactional accrual/allocation functions.

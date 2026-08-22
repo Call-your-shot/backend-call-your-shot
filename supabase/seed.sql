@@ -43,10 +43,14 @@ insert into energy_readings (
   interval_end,
   consumption_kwh,
   solar_generation_kwh,
+  solar_consumed_by_tenant_kwh,
   grid_import_kwh,
   grid_export_kwh,
+  battery_charge_kwh,
+  battery_discharge_kwh,
   battery_soc_pct,
-  source
+  source,
+  finalized_at
 )
 select
   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
@@ -55,17 +59,30 @@ select
   slot + interval '1 hour',
   round((0.45 + case when extract(hour from slot) between 17 and 22 then 0.55 else 0.15 end)::numeric, 3),
   round((case when extract(hour from slot) between 6 and 18 then sin(((extract(hour from slot) - 6) / 12.0) * pi()) * 2.8 else 0 end)::numeric, 3),
+  round(least(
+    (0.45 + case when extract(hour from slot) between 17 and 22 then 0.55 else 0.15 end),
+    (case when extract(hour from slot) between 6 and 18 then sin(((extract(hour from slot) - 6) / 12.0) * pi()) * 2.8 else 0 end)
+  )::numeric, 3),
   round(greatest(0, (0.45 + case when extract(hour from slot) between 17 and 22 then 0.55 else 0.15 end) - (case when extract(hour from slot) between 6 and 18 then sin(((extract(hour from slot) - 6) / 12.0) * pi()) * 2.8 else 0 end) * 0.7)::numeric, 3),
   round(greatest(0, (case when extract(hour from slot) between 6 and 18 then sin(((extract(hour from slot) - 6) / 12.0) * pi()) * 2.8 else 0 end) - (0.45 + case when extract(hour from slot) between 17 and 22 then 0.55 else 0.15 end))::numeric, 3),
+  0,
+  0,
   round((45 + 35 * sin(extract(epoch from slot) / 86400.0))::numeric, 1),
-  'mock'
-from generate_series(date_trunc('hour', now() - interval '30 days'), date_trunc('hour', now()), interval '1 hour') as slot
+  'mock',
+  now()
+from generate_series(
+  date_trunc('hour', now() - interval '30 days'),
+  date_trunc('hour', now() - interval '1 hour'),
+  interval '1 hour'
+) as slot
 on conflict (property_id, meter_id, interval_start, interval_end, source) do update set
   consumption_kwh = excluded.consumption_kwh,
   solar_generation_kwh = excluded.solar_generation_kwh,
+  solar_consumed_by_tenant_kwh = excluded.solar_consumed_by_tenant_kwh,
   grid_import_kwh = excluded.grid_import_kwh,
   grid_export_kwh = excluded.grid_export_kwh,
-  battery_soc_pct = excluded.battery_soc_pct;
+  battery_soc_pct = excluded.battery_soc_pct,
+  finalized_at = excluded.finalized_at;
 
 insert into bills (id, property_id, tenant_user_id, tariff_id, period_start, period_end, consumption_kwh, solar_generation_kwh, grid_import_kwh, grid_export_kwh, usage_cost, supply_cost, solar_credit, total_amount, estimated_savings, carbon_avoided_kg, status)
 values
@@ -105,3 +122,92 @@ on conflict (id) do nothing;
 insert into energy_control_settings (property_id, mode, battery_min_reserve_pct, allow_grid_export, max_grid_import_kw, updated_by)
 values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'automatic', 20, true, 8, '22222222-2222-4222-8222-222222222222')
 on conflict (property_id) do update set mode = excluded.mode, battery_min_reserve_pct = excluded.battery_min_reserve_pct;
+
+insert into green_credit_programs (
+  id, property_id, name, version, credits_per_kwh_microcredits,
+  tenant_share_bps, owner_share_bps, enabled, effective_from
+) values (
+  '12121212-1212-4121-8121-121212121212',
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  'Demo verified solar rewards',
+  1,
+  1000000,
+  7000,
+  3000,
+  true,
+  now() - interval '1 year'
+) on conflict (property_id, version) do update set
+  credits_per_kwh_microcredits = excluded.credits_per_kwh_microcredits,
+  tenant_share_bps = excluded.tenant_share_bps,
+  owner_share_bps = excluded.owner_share_bps,
+  enabled = excluded.enabled;
+
+insert into green_projects (
+  id, slug, title, description, category, location, target_microcredits,
+  minimum_allocation_microcredits, status, impact_unit, expected_impact,
+  verification_method, opens_at, closes_at, metadata
+) values
+  (
+    '13131313-1313-4131-8131-131313131313',
+    'illawarra-community-battery',
+    'Illawarra Community Battery',
+    'Support shared battery capacity that helps local households use more renewable electricity.',
+    'energy_storage',
+    'Illawarra, NSW',
+    250000000,
+    1000000,
+    'open',
+    'kWh of community storage supported',
+    500,
+    'Quarterly operator reports and commissioned-capacity evidence',
+    now() - interval '7 days',
+    now() + interval '180 days',
+    '{"curated":true,"featured":true}'
+  ),
+  (
+    '14141414-1414-4141-8141-141414141414',
+    'social-housing-solar',
+    'Solar for Social Housing',
+    'Fund rooftop solar installations for households facing energy hardship.',
+    'rooftop_solar',
+    'New South Wales',
+    400000000,
+    1000000,
+    'open',
+    'solar capacity installed (kW)',
+    25,
+    'Installer certificates, inverter commissioning records, and annual generation reports',
+    now() - interval '7 days',
+    now() + interval '270 days',
+    '{"curated":true}'
+  ),
+  (
+    '15151515-1515-4151-8151-151515151515',
+    'coastal-habitat-restoration',
+    'Coastal Habitat Restoration',
+    'Restore native coastal vegetation and improve habitat resilience.',
+    'habitat_restoration',
+    'South Coast, NSW',
+    150000000,
+    500000,
+    'open',
+    'square metres restored',
+    10000,
+    'Geotagged planting records and independent completion review',
+    now() - interval '7 days',
+    now() + interval '150 days',
+    '{"curated":true}'
+  )
+on conflict (id) do update set
+  title = excluded.title,
+  description = excluded.description,
+  target_microcredits = excluded.target_microcredits,
+  minimum_allocation_microcredits = excluded.minimum_allocation_microcredits,
+  status = excluded.status,
+  metadata = excluded.metadata;
+
+select accrue_green_credits(
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  now() - interval '30 days',
+  now()
+);

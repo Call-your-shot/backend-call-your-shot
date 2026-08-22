@@ -3,7 +3,10 @@ __pycache__/
 *.pyc
 *.pyo
 .pytest_cache/
+.env
 .env.local
+.env.*
+
 
 # Generated docs/artifacts
 docs/

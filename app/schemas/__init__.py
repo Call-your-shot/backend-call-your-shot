@@ -1,5 +1,7 @@
 from .common import ApiModel, ListResponse
 from .energy import (
+    AnnualEstimationRequest,
+    AnnualEstimationResponse,
     Battery,
     Dashboard,
     EnergyReading,
@@ -10,6 +12,7 @@ from .energy import (
     SolarAssessmentInput,
     SolarInstallation,
     SolarInstallationInput,
+    SurveyFormData,
     Tariff,
     TariffInput,
 )
@@ -38,6 +41,8 @@ __all__ = [
     "ApiModel",
     "AnalysisRequest",
     "AnalysisResponse",
+    "AnnualEstimationRequest",
+    "AnnualEstimationResponse",
     "Battery",
     "BatteryBMSTelemetry",
     "BatchPricingRequest",
@@ -65,7 +70,9 @@ __all__ = [
     "SolarInstallationInput",
     "SolarInverterTelemetry",
     "SummaryResponse",
+    "SurveyFormData",
     "Tariff",
     "TariffInput",
     "TelemetryPacket",
 ]
+

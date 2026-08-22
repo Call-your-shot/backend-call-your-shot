@@ -4,7 +4,14 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api_link import analytics_router, energy_router, ingestion_router, pricing_router, roi_router
+from .api_link import (
+    analytics_router,
+    energy_router,
+    estimation_router,
+    ingestion_router,
+    pricing_router,
+    roi_router,
+)
 
 load_dotenv(".env.local")
 
@@ -22,6 +29,7 @@ app.add_middleware(
 app.include_router(energy_router)
 app.include_router(analytics_router)
 app.include_router(ingestion_router)
+app.include_router(estimation_router)
 app.include_router(pricing_router)
 app.include_router(roi_router)
 
@@ -35,6 +43,7 @@ def root() -> dict[str, str]:
         "health": "/api/health",
         "analytics_dashboard": "/api/v1/analytics/dashboard",
         "ingestion_telemetry": "/api/v1/ingestion/telemetry",
+        "estimate_annual_load": "/api/v1/analytics/estimate-annual-load",
         "pricing": "/api/v1/pricing/calculate",
         "roi": "/api/v1/roi/analyse",
     }

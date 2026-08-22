@@ -1,0 +1,10 @@
+# Python & Environment
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db

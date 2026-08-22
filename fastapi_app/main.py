@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .routers.ingestion import router as ingestion_router
 from .routes import router
 
 load_dotenv(".env.local")
@@ -20,6 +21,7 @@ app.add_middleware(
 )
 
 app.include_router(router)
+app.include_router(ingestion_router)
 
 
 @app.get("/")
@@ -29,10 +31,13 @@ def root() -> dict[str, str]:
         "service": "energy-platform-fastapi",
         "docs": "/docs",
         "health": "/api/health",
+        "ingestion_telemetry": "/api/v1/ingestion/telemetry",
     }
+
 
 
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("fastapi_app.main:app", host="0.0.0.0", port=int(os.getenv("PORT", "8000")), reload=True)
+    uvicorn.run("fastapi_app.main:app", host="0.0.0.0", port=int(os.getenv("PORT", "8001")), reload=True)
+

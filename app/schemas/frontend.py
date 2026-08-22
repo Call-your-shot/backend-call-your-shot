@@ -26,3 +26,27 @@ class PropertyInviteInput(ApiModel):
 
 class InviteAcceptInput(ApiModel):
     email: str = Field(min_length=3)
+
+
+class CreateFrontendPropertyInput(ApiModel):
+    email: str = Field(min_length=3)
+    address: str = Field(min_length=3, max_length=500)
+    invite_email: Optional[str] = Field(default=None, alias="inviteEmail")
+    solar_system: Optional[dict] = Field(default=None, alias="solarSystem")
+
+
+class UserPreferencesInput(ApiModel):
+    email: str = Field(min_length=3)
+    notifications: dict[str, bool] = Field(default_factory=dict)
+    language: str = "en-AU"
+    large_text: bool = Field(default=False, alias="largeText")
+    reduce_motion: bool = Field(default=False, alias="reduceMotion")
+
+
+class SupportReportInput(ApiModel):
+    email: str = Field(min_length=3)
+    property_id: Optional[str] = Field(default=None, alias="propertyId")
+    category: str = Field(min_length=1, max_length=100)
+    description: str = Field(min_length=1, max_length=4000)
+    contact_preference: str = Field(default="email", alias="contactPreference")
+    attachment_name: Optional[str] = Field(default=None, alias="attachmentName")

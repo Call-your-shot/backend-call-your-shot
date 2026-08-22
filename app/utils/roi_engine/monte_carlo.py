@@ -50,6 +50,9 @@ class SimulationYear:
     grid_rate_cents_per_kwh: float
     export_rate_cents_per_kwh: float
     tenant_rate_cents_per_kwh: float
+    grid_import_kwh: float
+    tenant_total_electricity_cost_dollars: float
+    tenant_savings_dollars: float
     tenant_revenue_dollars: float
     export_revenue_dollars: float
     operating_cost_dollars: float
@@ -72,12 +75,19 @@ class _SimulationArrays:
     first_self_consumption: FloatArray
     first_solar_consumption: FloatArray
     first_exports: FloatArray
+    first_grid_imports: FloatArray
+    first_solar_share: FloatArray
     first_grid_rate: FloatArray
     first_export_rate: FloatArray
+    first_tenant_rate: FloatArray
+    first_grid_cost: FloatArray
+    first_tenant_total_cost: FloatArray
+    first_tenant_savings: FloatArray
     first_operating_cost: FloatArray
     first_tenant_revenue: FloatArray
     first_export_revenue: FloatArray
     first_net_cashflow: FloatArray
+    first_simple_annual_yield: FloatArray | None
     average_annual_cashflow: FloatArray
     cumulative_roi_percentage: FloatArray | None
     tariff_clamp_used: bool
@@ -203,8 +213,14 @@ def _simulate_paths(
     first_actual_scr = np.zeros(iterations)
     first_consumed = np.zeros(iterations)
     first_exports = np.zeros(iterations)
+    first_grid_imports = np.zeros(iterations)
+    first_solar_share = np.zeros(iterations)
     first_grid_rate = np.zeros(iterations)
     first_export_rate = np.zeros(iterations)
+    first_tenant_rate = np.zeros(iterations)
+    first_grid_cost = np.zeros(iterations)
+    first_tenant_total_cost = np.zeros(iterations)
+    first_tenant_savings = np.zeros(iterations)
     first_operating_cost = np.zeros(iterations)
     first_tenant_revenue = np.zeros(iterations)
     first_export_revenue = np.zeros(iterations)
@@ -268,11 +284,18 @@ def _simulate_paths(
                 month_generation * structural_scr, month_usage
             )
         annual_exports = np.maximum(generation - annual_consumed, 0.0)
+        annual_grid_imports = np.maximum(usage - annual_consumed, 0.0)
         actual_scr = np.divide(
             annual_consumed,
             generation,
             out=np.zeros_like(annual_consumed),
             where=generation > 0,
+        )
+        solar_share = np.divide(
+            annual_consumed,
+            usage,
+            out=np.zeros_like(annual_consumed),
+            where=usage > 0,
         )
 
         if pricing.pricing_mode == "fixed":
@@ -319,6 +342,10 @@ def _simulate_paths(
 
         annual_tenant_revenue = annual_consumed * tenant_rate / 100
         annual_export_revenue = annual_exports * export_rate / 100
+        annual_grid_cost = annual_grid_imports * grid_rate / 100
+        annual_tenant_total_cost = annual_grid_cost + annual_tenant_revenue
+        annual_baseline_cost = usage * grid_rate / 100
+        annual_tenant_savings = annual_baseline_cost - annual_tenant_total_cost
         annual_net_cashflow = (
             annual_tenant_revenue + annual_export_revenue - operating_cost
         )
@@ -358,8 +385,14 @@ def _simulate_paths(
             first_actual_scr = actual_scr.copy()
             first_consumed = annual_consumed.copy()
             first_exports = annual_exports.copy()
+            first_grid_imports = annual_grid_imports.copy()
+            first_solar_share = solar_share.copy()
             first_grid_rate = grid_rate.copy()
             first_export_rate = export_rate.copy()
+            first_tenant_rate = tenant_rate.copy()
+            first_grid_cost = annual_grid_cost.copy()
+            first_tenant_total_cost = annual_tenant_total_cost.copy()
+            first_tenant_savings = annual_tenant_savings.copy()
             first_operating_cost = operating_cost.copy()
             first_tenant_revenue = annual_tenant_revenue.copy()
             first_export_revenue = annual_export_revenue.copy()
@@ -377,6 +410,9 @@ def _simulate_paths(
                     grid_rate_cents_per_kwh=float(grid_rate[0]),
                     export_rate_cents_per_kwh=float(export_rate[0]),
                     tenant_rate_cents_per_kwh=float(tenant_rate[0]),
+                    grid_import_kwh=float(annual_grid_imports[0]),
+                    tenant_total_electricity_cost_dollars=float(annual_tenant_total_cost[0]),
+                    tenant_savings_dollars=float(annual_tenant_savings[0]),
                     tenant_revenue_dollars=float(annual_tenant_revenue[0]),
                     export_revenue_dollars=float(annual_export_revenue[0]),
                     operating_cost_dollars=float(operating_cost[0]),
@@ -395,12 +431,21 @@ def _simulate_paths(
         first_self_consumption=first_actual_scr,
         first_solar_consumption=first_consumed,
         first_exports=first_exports,
+        first_grid_imports=first_grid_imports,
+        first_solar_share=first_solar_share,
         first_grid_rate=first_grid_rate,
         first_export_rate=first_export_rate,
+        first_tenant_rate=first_tenant_rate,
+        first_grid_cost=first_grid_cost,
+        first_tenant_total_cost=first_tenant_total_cost,
+        first_tenant_savings=first_tenant_savings,
         first_operating_cost=first_operating_cost,
         first_tenant_revenue=first_tenant_revenue,
         first_export_revenue=first_export_revenue,
         first_net_cashflow=first_net_cashflow,
+        first_simple_annual_yield=(
+            first_net_cashflow / net_cost * 100 if net_cost > 0 else None
+        ),
         average_annual_cashflow=total_cashflow / years,
         cumulative_roi_percentage=cumulative_roi,
         tariff_clamp_used=tariff_clamp_used,
@@ -637,6 +682,13 @@ def run_monte_carlo_roi(request: InitialEstimateRequest) -> InitialEstimateRespo
         headline=InitialEstimateHeadline(
             median_payback_years=payback_summary.median if payback_summary else None,
             mean_payback_years=payback_summary.mean if payback_summary else None,
+            median_first_year_tenant_savings_dollars=float(
+                np.median(arrays.first_tenant_savings)
+            ),
+            probability_tenant_saves_money=round(
+                float(np.count_nonzero(arrays.first_tenant_savings > 0)) / iterations,
+                4,
+            ),
             forecast_payback_range_years=ForecastRange(
                 lower=payback_summary.p05 if payback_summary else None,
                 upper=payback_summary.p95 if payback_summary else None,
@@ -667,8 +719,17 @@ def run_monte_carlo_roi(request: InitialEstimateRequest) -> InitialEstimateRespo
                 arrays.first_solar_consumption, 2
             ),
             first_year_export_kwh=summarise_distribution(arrays.first_exports, 2),
+            first_year_grid_import_kwh=summarise_distribution(
+                arrays.first_grid_imports, 2
+            ),
+            tenant_solar_share_ratio=summarise_distribution(
+                arrays.first_solar_share, 4
+            ),
         ),
         financial_distribution=InitialFinancialDistribution(
+            first_year_tenant_solar_rate_cents_per_kwh=summarise_distribution(
+                arrays.first_tenant_rate, 4
+            ),
             first_year_tenant_revenue_dollars=summarise_distribution(
                 arrays.first_tenant_revenue, 2
             ),
@@ -676,11 +737,25 @@ def run_monte_carlo_roi(request: InitialEstimateRequest) -> InitialEstimateRespo
                 arrays.first_export_revenue, 2
             ),
             first_year_total_revenue_dollars=summarise_distribution(total_revenue, 2),
+            first_year_grid_cost_dollars=summarise_distribution(
+                arrays.first_grid_cost, 2
+            ),
+            first_year_tenant_total_electricity_cost_dollars=summarise_distribution(
+                arrays.first_tenant_total_cost, 2
+            ),
+            first_year_tenant_savings_dollars=summarise_distribution(
+                arrays.first_tenant_savings, 2
+            ),
             first_year_operating_cost_dollars=summarise_distribution(
                 arrays.first_operating_cost, 2
             ),
             first_year_net_cashflow_dollars=summarise_distribution(
                 arrays.first_net_cashflow, 2
+            ),
+            first_year_simple_annual_yield_percentage=(
+                summarise_distribution(arrays.first_simple_annual_yield, 2)
+                if arrays.first_simple_annual_yield is not None
+                else None
             ),
             average_annual_net_cashflow_dollars=summarise_distribution(
                 arrays.average_annual_cashflow, 2

@@ -61,6 +61,27 @@ CONTRACTS: list[dict] = []
 NOTIFICATIONS: list[dict] = []
 USERS: list[dict] = [
     {
+        "id": "aaaaaaaa-1111-4111-8111-111111111111",
+        "email": "sarah.chen@example.com",
+        "full_name": "Sarah Chen",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "status": "active",
+    },
+    {
+        "id": "aaaaaaaa-2222-4222-8222-222222222222",
+        "email": "david.marino@example.com",
+        "full_name": "David Marino",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "status": "active",
+    },
+    {
+        "id": "aaaaaaaa-3333-4333-8333-333333333333",
+        "email": "priya.nair@example.com",
+        "full_name": "Priya Nair",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "status": "active",
+    },
+    {
         "id": TENANT_USER_ID,
         "email": "tenant@example.com",
         "full_name": "Demo Tenant",
@@ -77,10 +98,13 @@ USERS: list[dict] = [
 ]
 PROPERTIES: list[dict] = [PROPERTY.copy()]
 PROPOSALS: list[dict] = []
+USER_PREFERENCES: dict[str, dict] = {}
+SUPPORT_REPORTS: list[dict] = []
 TENANCY_PLANS: list[dict] = [
     {
         "id": "ten-priya-wollongong",
         "email": "tenant@example.com",
+        "emails": ["tenant@example.com", "priya.nair@example.com", "sarah.chen@example.com"],
         "tenant_name": "Priya Sharma",
         "property_id": "prop-priya-figtree",
 
@@ -131,7 +155,12 @@ LANDLORD_PROPERTY_VIEWS: list[dict] = [
         "aliases": ["prop-priya-figtree"],
         "email": "landlord@example.com",
 
-        "owner_emails": ["owner@example.com", "landlord@example.com"],
+        "owner_emails": [
+            "owner@example.com",
+            "landlord@example.com",
+            "david.marino@example.com",
+            "priya.nair@example.com",
+        ],
         "address": {
             "street": "42 Bellambi Lane",
             "suburb": "Bellambi",

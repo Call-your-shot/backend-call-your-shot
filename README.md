@@ -116,7 +116,16 @@ POST /api/v1/roi/summary
 POST /api/v1/roi/forecast
 POST /api/v1/roi/history-analysis
 POST /api/v1/roi/estimate-initial
+POST /api/v1/assessments/initial
+GET  /api/v1/assessments/{assessment_id}
 ```
+
+`/roi/estimate-initial` is the pure Monte Carlo engine. The assessment routes
+are the application-facing orchestration layer: they combine roof, household,
+installation-cost, and pricing assumptions, persist the result for the current
+process, and return separate tenant-savings and landlord-payback economics.
+Proposals can reference the saved assessment so they do not recalculate a
+different financial result.
 
 Annual estimation:
 
@@ -250,6 +259,13 @@ The in-memory demo API uses:
 ```text
 11111111-1111-4111-8111-111111111111
 ```
+
+The UI-facing demo accounts are `sarah.chen@example.com`,
+`david.marino@example.com`, and `priya.nair@example.com`. Dashboard and
+workflow data remain process-local in demo mode and reset when FastAPI
+restarts. Green credits can use either the demo repository or Supabase. A
+production deployment must use the prepared Supabase schema rather than
+treating these seeds as durable data.
 
 Example:
 

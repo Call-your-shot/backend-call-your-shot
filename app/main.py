@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .api_link import (
     analytics_router,
+    assessments_router,
     dashboard_router,
     database_router,
     energy_router,
@@ -39,6 +40,7 @@ app.include_router(energy_router)
 app.include_router(dashboard_router)
 app.include_router(database_router)
 app.include_router(analytics_router)
+app.include_router(assessments_router)
 app.include_router(ingestion_router)
 app.include_router(estimation_router)
 app.include_router(green_credits_router)
@@ -83,6 +85,7 @@ def root() -> dict[str, str]:
         "notifications": "/api/properties/{property_id}/notifications",
         "contracts": "/api/properties/{property_id}/contracts/generate",
         "roi": "/api/v1/roi/analyse",
+        "initial_assessment": "/api/v1/assessments/initial",
         "green_projects": "/api/v1/green-projects",
     }
 

@@ -63,9 +63,14 @@ class HourlyBreakdownItem(ApiModel):
     solar_self_consumed_kwh: float
     soc_percent: float
     import_rate: float
+    solar_rate_cents_per_kwh: float
+    export_rate_cents_per_kwh: float
     cost_without_solar: float
     actual_cost: float
     hourly_savings: float
+    tenant_solar_charge_dollars: float
+    export_revenue_dollars: float
+    landlord_revenue_dollars: float
     co2_offset_kg: float
 
 
@@ -77,6 +82,9 @@ class DashboardAnalyticsResponse(ApiModel):
     total_grid_exported_kwh: float
     total_energy_saved_kwh: float
     total_money_saved_usd: float
+    total_tenant_savings_dollars: float
+    total_landlord_revenue_dollars: float
+    currency: str = "AUD"
     self_sufficiency_percent: float
     total_co2_offset_kg: float
     hourly_breakdown: list[HourlyBreakdownItem]

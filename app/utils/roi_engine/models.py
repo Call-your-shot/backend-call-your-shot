@@ -697,6 +697,8 @@ class ForecastRange(BaseModel):
 class InitialEstimateHeadline(BaseModel):
     median_payback_years: float | None
     mean_payback_years: float | None
+    median_first_year_tenant_savings_dollars: float
+    probability_tenant_saves_money: float
     forecast_interval_level: int = 90
     forecast_payback_range_years: ForecastRange
     probability_payback_within_7_years: float
@@ -721,14 +723,21 @@ class InitialEnergyDistribution(BaseModel):
     self_consumption_ratio: DistributionSummary
     first_year_tenant_solar_consumption_kwh: DistributionSummary
     first_year_export_kwh: DistributionSummary
+    first_year_grid_import_kwh: DistributionSummary
+    tenant_solar_share_ratio: DistributionSummary
 
 
 class InitialFinancialDistribution(BaseModel):
+    first_year_tenant_solar_rate_cents_per_kwh: DistributionSummary
     first_year_tenant_revenue_dollars: DistributionSummary
     first_year_export_revenue_dollars: DistributionSummary
     first_year_total_revenue_dollars: DistributionSummary
+    first_year_grid_cost_dollars: DistributionSummary
+    first_year_tenant_total_electricity_cost_dollars: DistributionSummary
+    first_year_tenant_savings_dollars: DistributionSummary
     first_year_operating_cost_dollars: DistributionSummary
     first_year_net_cashflow_dollars: DistributionSummary
+    first_year_simple_annual_yield_percentage: DistributionSummary | None
     average_annual_net_cashflow_dollars: DistributionSummary
     cumulative_roi_percentage: DistributionSummary | None
 

@@ -68,9 +68,11 @@ def calculate_interval_price(
     if solar_available_kwh is None:
         solar_usage = usage_kwh
         grid_usage = 0.0
+        solar_export = 0.0
     else:
         solar_usage = min(usage_kwh, solar_available_kwh)
         grid_usage = max(usage_kwh - solar_available_kwh, 0.0)
+        solar_export = max(solar_available_kwh - solar_usage, 0.0)
 
     if pricing_mode == "fixed":
         solar_rate = fixed_solar_rate
@@ -87,6 +89,7 @@ def calculate_interval_price(
     tenant_saving = baseline_cost - total_charge
     tenant_saving_pct = round(tenant_saving / baseline_cost * 100, 2) if baseline_cost > 0 else None
     export_value = cents_to_dollars(solar_usage * export_rate)
+    actual_export_revenue = cents_to_dollars(solar_export * export_rate)
 
     return PricingResult(
         timestamp=timestamp,
@@ -94,6 +97,7 @@ def calculate_interval_price(
         usage_kwh=round(usage_kwh, 4),
         solar_available_kwh=round(solar_available_kwh, 4) if solar_available_kwh is not None else None,
         solar_usage_kwh=round(solar_usage, 4),
+        solar_export_kwh=round(solar_export, 4),
         grid_usage_kwh=round(grid_usage, 4),
         grid_rate_cents_per_kwh=round(grid_rate, 4),
         export_rate_cents_per_kwh=round(export_rate, 4),
@@ -106,6 +110,8 @@ def calculate_interval_price(
         tenant_saving_dollars=round(tenant_saving, 4),
         tenant_saving_percentage=tenant_saving_pct,
         landlord_export_value_dollars=round(export_value, 4),
+        actual_export_revenue_dollars=round(actual_export_revenue, 4),
+        landlord_total_revenue_dollars=round(solar_charge + actual_export_revenue, 4),
         landlord_additional_revenue_dollars=round(solar_charge - export_value, 4),
     )
 
@@ -131,6 +137,7 @@ def calculate_batch_price(request: BatchPricingRequest) -> BatchPricingResponse:
     summary = BatchSummary(
         total_usage_kwh=round(sum(item.usage_kwh for item in intervals), 4),
         total_solar_usage_kwh=round(sum(item.solar_usage_kwh for item in intervals), 4),
+        total_solar_export_kwh=round(sum(item.solar_export_kwh for item in intervals), 4),
         total_grid_usage_kwh=round(sum(item.grid_usage_kwh for item in intervals), 4),
         total_charge_dollars=round(sum(item.total_charge_dollars for item in intervals), 4),
         baseline_grid_cost_dollars=round(baseline, 4),
@@ -138,6 +145,8 @@ def calculate_batch_price(request: BatchPricingRequest) -> BatchPricingResponse:
         tenant_saving_percentage=round(tenant_saving / baseline * 100, 2) if baseline > 0 else None,
         landlord_solar_revenue_dollars=round(sum(item.solar_charge_dollars for item in intervals), 4),
         landlord_export_value_dollars=round(sum(item.landlord_export_value_dollars for item in intervals), 4),
+        actual_export_revenue_dollars=round(sum(item.actual_export_revenue_dollars for item in intervals), 4),
+        landlord_total_revenue_dollars=round(sum(item.landlord_total_revenue_dollars for item in intervals), 4),
         landlord_additional_revenue_dollars=round(sum(item.landlord_additional_revenue_dollars for item in intervals), 4),
     )
     return BatchPricingResponse(intervals=intervals, summary=summary)

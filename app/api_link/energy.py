@@ -33,11 +33,13 @@ from ..schemas import (
     Tariff,
     TariffInput,
 )
-from ..schemas.frontend import InviteAcceptInput, OwnerEmailInput, PropertyInviteInput
+from ..schemas.frontend import CreateFrontendPropertyInput, InviteAcceptInput, OwnerEmailInput, PropertyInviteInput
 from ..utils import battery_snapshot, build_readings, dashboard_summary, estimate_solar, normalize_reading
 from ..utils.plan_views import (
     accept_property_invitation,
     approve_property_leave_request,
+    acknowledge_property_leave_request,
+    create_landlord_property,
     get_landlord_property,
     invite_property_tenant,
     list_landlord_properties,
@@ -67,6 +69,11 @@ def list_properties(email: Optional[str] = Query(None, min_length=3)) -> dict:
     return {"data": [Property(**property_row) for property_row in PROPERTIES]}
 
 
+@router.post("/properties", status_code=status.HTTP_201_CREATED)
+def create_property(payload: CreateFrontendPropertyInput) -> dict:
+    return create_landlord_property(payload.model_dump())
+
+
 @router.get("/properties/{property_id}")
 def get_property(property_id: str, email: Optional[str] = Query(None, min_length=3)) -> dict:
     if email:
@@ -79,6 +86,11 @@ def get_property(property_id: str, email: Optional[str] = Query(None, min_length
 @router.post("/properties/{property_id}/leave-request/approve")
 def approve_leave_request(property_id: str, payload: OwnerEmailInput) -> dict:
     return approve_property_leave_request(property_id, payload.model_dump())
+
+
+@router.post("/properties/{property_id}/leave-request/acknowledge")
+def acknowledge_leave_request(property_id: str, payload: OwnerEmailInput) -> dict:
+    return acknowledge_property_leave_request(property_id, payload.model_dump())
 
 
 @router.post("/properties/{property_id}/invite")
@@ -128,8 +140,15 @@ def get_dashboard(
         ]
         manager_extras = {
             "roi_analytics": {
-                "estimatedRoiPct": latest_assessment.get("estimated_roi_pct") if latest_assessment else None,
-                "estimatedPaybackYears": latest_assessment.get("estimated_payback_years") if latest_assessment else None,
+                "source": "insufficient_data",
+                "capitalRecoveredDollars": None,
+                "capitalRecoveredPercentage": None,
+                "estimatedPaybackYears": None,
+                "reason": (
+                    "Legacy roof sizing exists, but installation cost and posted cash-flow history are required for authoritative ROI."
+                    if latest_assessment
+                    else "No installation cost and cash-flow history are available."
+                ),
                 "installations": len([row for row in SOLAR_INSTALLATIONS if row["property_id"] == property_id]),
             },
             "price_adjustments": [row for row in PRICE_ADJUSTMENTS if row["property_id"] == property_id],

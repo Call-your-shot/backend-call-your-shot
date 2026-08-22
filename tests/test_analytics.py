@@ -74,14 +74,17 @@ def test_process_telemetry_timeseries_calculations():
     assert item_1.room_load_kwh == 3.7
     assert item_1.solar_self_consumed_kwh == 1.5
 
-    # Hour 01:00 is off-peak ($0.16)
-    assert item_1.import_rate == 0.16
-    # cost_without_solar = 3.7 * 0.16 = 0.592
-    assert item_1.cost_without_solar == 0.592
-    # actual_cost = (2.0 * 0.16) - (0.5 * 0.07) = 0.32 - 0.035 = 0.285
-    assert item_1.actual_cost == 0.285
-    # hourly_savings = 0.592 - 0.285 = 0.307
-    assert item_1.hourly_savings == 0.307
+    # 01:00 UTC is 11:00 Australia/Sydney, so the canonical pricing engine
+    # applies the 12.35 c/kWh grid and 3.2 c/kWh export schedules.
+    assert item_1.import_rate == 0.1235
+    assert item_1.export_rate_cents_per_kwh == 3.2
+    assert item_1.solar_rate_cents_per_kwh == 8.0381
+    assert item_1.cost_without_solar == 0.4569
+    assert item_1.actual_cost == 0.3707
+    assert item_1.hourly_savings == 0.0862
+    assert item_1.tenant_solar_charge_dollars == 0.1608
+    assert item_1.export_revenue_dollars == 0.016
+    assert item_1.landlord_revenue_dollars == 0.1768
     # co2_offset = 3.0 * 0.70 = 2.1
     assert item_1.co2_offset_kg == 2.1
 

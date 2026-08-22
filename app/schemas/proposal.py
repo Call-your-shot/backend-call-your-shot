@@ -24,6 +24,11 @@ class TenantInfo(ApiModel):
     email: str = Field(..., description="Tenant email address")
 
 
+class LandlordInfo(ApiModel):
+    name: str = Field(default="Property owner", description="Landlord or proposal recipient name")
+    email: str = Field(..., description="Landlord or proposal recipient email address")
+
+
 class SystemInfo(ApiModel):
     panel_count: int = Field(..., alias="panelCount")
     system_size_kw: float = Field(..., alias="systemSizeKw")
@@ -46,8 +51,10 @@ class ConsumptionInfo(ApiModel):
 
 
 class CreateProposalRequest(ApiModel):
+    assessment_id: Optional[str] = Field(default=None, alias="assessmentId")
     address: Union[str, AddressModel] = Field(...)
     tenant: TenantInfo = Field(...)
+    landlord: Optional[LandlordInfo] = Field(default=None)
     system: SystemInfo = Field(...)
     consumption: ConsumptionInfo = Field(...)
 
@@ -56,12 +63,14 @@ class ProposalResponse(ApiModel):
     id: str = Field(...)
     property_id: str = Field(..., alias="propertyId")
     proposal_type: str = Field(default="solar", alias="proposalType")
+    assessment_id: Optional[str] = Field(default=None, alias="assessmentId")
     title: str = Field(...)
     description: str = Field(...)
     status: str = Field(...)
     invite_token: str = Field(..., alias="inviteToken")
     invite_url: str = Field(..., alias="inviteUrl")
     tenant: TenantInfo = Field(...)
+    landlord: Optional[LandlordInfo] = Field(default=None)
     system: SystemInfo = Field(...)
     consumption: ConsumptionInfo = Field(...)
     financial_summary: dict[str, Any] = Field(..., alias="financialSummary")

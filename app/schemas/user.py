@@ -21,6 +21,17 @@ class CreateUserInput(ApiModel):
 class UserResponse(ApiModel):
     id: str = Field(..., description="Unique user identifier")
     email: str = Field(..., description="User email address")
+    full_name: str | None = Field(default=None, description="User display name")
     created_at: str = Field(..., description="Timestamp when the user was created")
     status: str = Field(default="active", description="User status")
 
+
+class UpdateUserProfileInput(ApiModel):
+    email: str
+    full_name: str = Field(min_length=1, max_length=120)
+    phone: str | None = Field(default=None, max_length=40)
+
+
+class UserProfileResponse(UserResponse):
+    phone: str | None = None
+    avatar_initials: str

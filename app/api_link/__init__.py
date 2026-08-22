@@ -1,4 +1,5 @@
 from .analytics import router as analytics_router
+from .assessments import router as assessments_router
 from .dashboard import router as dashboard_router
 from .database import router as database_router
 from .energy import router as energy_router
@@ -15,6 +16,7 @@ from .workflow import router as workflow_router
 
 __all__ = [
     "analytics_router",
+    "assessments_router",
     "dashboard_router",
     "database_router",
     "energy_router",

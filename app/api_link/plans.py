@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Query
 
 from ..schemas.frontend import PlanLeaveRequestInput
-from ..utils.plan_views import create_plan_leave_request, get_tenancy_plan, list_tenancy_plans
+from ..utils.plan_views import create_plan_leave_request, get_tenancy_plan, list_tenancy_plans, withdraw_plan_leave_request
 
 router = APIRouter(prefix="/api/plans", tags=["plans"])
 
@@ -22,3 +22,8 @@ def get_plan(plan_id: str, email: Optional[str] = Query(None)) -> dict:
 @router.post("/{plan_id}/leave")
 def create_leave_request(plan_id: str, payload: PlanLeaveRequestInput) -> dict:
     return create_plan_leave_request(plan_id, payload.model_dump())
+
+
+@router.delete("/{plan_id}/leave")
+def withdraw_leave_request(plan_id: str, email: str = Query(..., min_length=3)) -> dict:
+    return withdraw_plan_leave_request(plan_id, email)

@@ -18,6 +18,7 @@ from ..schemas.proposal import (
     CreateProposalRequest,
     ProposalResponse,
 )
+from ..utils.assessment_service import INITIAL_ASSESSMENTS
 
 router = APIRouter(tags=["proposals"])
 
@@ -103,16 +104,46 @@ def create_proposal(payload: CreateProposalRequest) -> ProposalResponse:
 
     grid_rate_cents = payload.consumption.rate_per_kwh_cents
     est_annual_ac = payload.system.estimated_annual_ac_kwh
-    est_annual_savings = round(est_annual_ac * (grid_rate_cents / 100.0), 2)
     co2_offset = round(est_annual_ac * 0.0007, 2)
+    assessment = None
+    if payload.assessment_id:
+        assessment = INITIAL_ASSESSMENTS.get(payload.assessment_id)
+        if assessment is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Referenced assessment was not found",
+            )
 
-    financial_summary = {
-        "estimatedAnnualSavings": est_annual_savings,
-        "co2OffsetTonnes": co2_offset,
-        "currency": "AUD",
-        "ratePerKwhCents": grid_rate_cents,
-        "systemSizeKw": payload.system.system_size_kw,
-    }
+    if assessment:
+        financial_summary = {
+            "assessmentId": assessment.id,
+            "forecastSource": assessment.forecast_source,
+            "estimatedAnnualTenantSavings": assessment.tenant_economics.annual_savings_dollars.median,
+            "estimatedAnnualLandlordCashflow": assessment.landlord_economics.first_year_net_cashflow_dollars.median,
+            "medianPaybackYears": assessment.landlord_economics.median_payback_years,
+            "paybackRangeYears": assessment.landlord_economics.payback_range_years,
+            "probabilityTenantSavesMoney": assessment.tenant_economics.probability_saves_money,
+            "netInstallationCostDollars": assessment.landlord_economics.net_installation_cost_dollars,
+            "co2OffsetTonnes": co2_offset,
+            "currency": "AUD",
+            "ratePerKwhCents": grid_rate_cents,
+            "systemSizeKw": payload.system.system_size_kw,
+            "modelVersion": "initial-assessment-v1",
+        }
+    else:
+        # Legacy proposals remain supported, but explicitly use the tenant's
+        # recommended-system demand rather than valuing every generated kWh
+        # as tenant-consumed electricity.
+        solar_used = min(est_annual_ac, payload.consumption.estimated_annual_kwh)
+        est_annual_savings = round(solar_used * (grid_rate_cents / 100.0), 2)
+        financial_summary = {
+            "estimatedAnnualSavings": est_annual_savings,
+            "co2OffsetTonnes": co2_offset,
+            "currency": "AUD",
+            "ratePerKwhCents": grid_rate_cents,
+            "systemSizeKw": payload.system.system_size_kw,
+            "warning": "Legacy proposal without a saved ROI assessment",
+        }
 
     now_iso = datetime.now(timezone.utc).isoformat()
 
@@ -120,12 +151,14 @@ def create_proposal(payload: CreateProposalRequest) -> ProposalResponse:
         "id": proposal_id,
         "property_id": property_rec["id"],
         "proposal_type": "solar",
+        "assessment_id": payload.assessment_id,
         "title": f"Rooftop Solar Proposal - {property_rec['address_line_1']}",
         "description": f"Tenant {payload.tenant.name} initialized a {payload.system.system_size_kw}kW solar proposal.",
         "status": "sent",
         "invite_token": invite_token,
         "invite_url": invite_url,
         "tenant": payload.tenant.model_dump(),
+        "landlord": payload.landlord.model_dump() if payload.landlord else None,
         "system": payload.system.model_dump(by_alias=True),
         "consumption": payload.consumption.model_dump(by_alias=True),
         "financial_summary": financial_summary,
@@ -171,7 +204,9 @@ def create_proposal(payload: CreateProposalRequest) -> ProposalResponse:
                     "invite_url": invite_url,
                     "financial_summary": financial_summary,
                     "terms": {
+                        "assessmentId": payload.assessment_id,
                         "tenant": payload.tenant.model_dump(),
+                        "landlord": payload.landlord.model_dump() if payload.landlord else None,
                         "system": payload.system.model_dump(by_alias=True),
                         "consumption": payload.consumption.model_dump(by_alias=True),
                     },
@@ -211,6 +246,7 @@ def get_proposal(proposal_id_or_token: str) -> ProposalResponse:
                     invite_token=row.get("invite_token") or proposal_id_or_token,
                     invite_url=row.get("invite_url") or f"http://localhost:3000/invite/{proposal_id_or_token}",
                     tenant=terms.get("tenant", {"name": "Tenant", "email": "tenant@example.com"}),
+                    landlord=terms.get("landlord"),
                     system=terms.get("system", {}),
                     consumption=terms.get("consumption", {}),
                     financial_summary=row.get("financial_summary", {}),
@@ -298,4 +334,3 @@ def list_user_properties(
         })
 
     return {"data": result}
-

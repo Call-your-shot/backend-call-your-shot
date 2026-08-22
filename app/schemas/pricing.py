@@ -64,6 +64,7 @@ class PricingResult(ApiModel):
     usage_kwh: float
     solar_available_kwh: Optional[float] = None
     solar_usage_kwh: float
+    solar_export_kwh: float
     grid_usage_kwh: float
     grid_rate_cents_per_kwh: float
     export_rate_cents_per_kwh: float
@@ -76,12 +77,15 @@ class PricingResult(ApiModel):
     tenant_saving_dollars: float
     tenant_saving_percentage: Optional[float] = None
     landlord_export_value_dollars: float
+    actual_export_revenue_dollars: float
+    landlord_total_revenue_dollars: float
     landlord_additional_revenue_dollars: float
 
 
 class BatchSummary(ApiModel):
     total_usage_kwh: float
     total_solar_usage_kwh: float
+    total_solar_export_kwh: float
     total_grid_usage_kwh: float
     total_charge_dollars: float
     baseline_grid_cost_dollars: float
@@ -89,6 +93,8 @@ class BatchSummary(ApiModel):
     tenant_saving_percentage: Optional[float] = None
     landlord_solar_revenue_dollars: float
     landlord_export_value_dollars: float
+    actual_export_revenue_dollars: float
+    landlord_total_revenue_dollars: float
     landlord_additional_revenue_dollars: float
 
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Optional
+from uuid import uuid4
 
 from fastapi import HTTPException, status
 
@@ -8,7 +9,9 @@ from ..data import DEMO_NOW, DEMO_TODAY, FRONTEND_NOTIFICATIONS, LANDLORD_PROPER
 
 
 def _email_matches(row: dict, email: str) -> bool:
-    return row.get("email", "").strip().lower() == email.strip().lower()
+    email_clean = email.strip().lower()
+    candidate_emails = [row.get("email", ""), *(row.get("emails") or [])]
+    return email_clean in {candidate.strip().lower() for candidate in candidate_emails}
 
 
 def _owner_matches(row: dict, email: str) -> bool:
@@ -234,14 +237,27 @@ def create_plan_leave_request(plan_id: str, payload: dict) -> dict:
     return _plan_detail(plan)
 
 
+def withdraw_plan_leave_request(plan_id: str, email: str) -> dict:
+    plan = _find_plan(plan_id, email)
+    leave_request = plan.get("leave_request")
+    if not leave_request or leave_request.get("status") != "pending":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No pending leave request")
+    plan["status"] = "active"
+    plan["leave_request"] = None
+    property_row = _find_property(plan["property_id"])
+    property_row["leave_request"] = None
+    return _plan_detail(plan)
+
+
 def _property_summary(row: dict) -> dict:
     tenant = row.get("current_tenant") or {}
+    system = row.get("system") or {}
     return {
         "id": row["id"],
         "address": row["address"],
         "imageVariant": row["image_variant"],
         "occupancyStatus": row["occupancy_status"],
-        "systemSizeKw": row["system"]["sizeKw"],
+        "systemSizeKw": system.get("sizeKw"),
         "currentTenantName": tenant.get("name"),
         "monthlyIncome": row["monthly_income"],
         "balanceOutstanding": row["balance_outstanding"],
@@ -330,6 +346,79 @@ def approve_property_leave_request(property_id: str, payload: dict) -> dict:
         related_id=plan["id"],
     )
     return _property_detail(property_row)
+
+
+def acknowledge_property_leave_request(property_id: str, payload: dict) -> dict:
+    property_row = _find_property(property_id)
+    if not _owner_matches(property_row, payload["email"]):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Email is not this property's owner")
+    leave_request = property_row.get("leave_request")
+    if not leave_request or leave_request.get("status") != "pending":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No pending leave request")
+    leave_request["status"] = "acknowledged"
+    leave_request.setdefault("timeline", {})["landlordAcknowledged"] = DEMO_TODAY
+    plan = _find_plan(leave_request["planId"])
+    if plan.get("leave_request"):
+        plan["leave_request"]["status"] = "acknowledged"
+        plan["leave_request"].setdefault("timeline", {})["landlordAcknowledged"] = DEMO_TODAY
+    return _property_detail(property_row)
+
+
+def create_landlord_property(payload: dict) -> dict:
+    address_text = payload["address"].strip()
+    parts = [part.strip() for part in address_text.split(",")]
+    system_input = payload.get("solar_system") or {}
+    property_id = f"prop-{uuid4()}"
+    system = None
+    if system_input:
+        system = {
+            "sizeKw": float(system_input.get("systemSizeKw") or system_input.get("sizeKw") or 0),
+            "panelCount": int(system_input.get("panelCount") or 0),
+            "installDate": DEMO_TODAY,
+            "inverterModel": "To be confirmed at installation",
+            "warrantyExpiry": "",
+            "status": "normal",
+            "todayGenerationKwh": 0,
+            "currentOutputKw": 0,
+            "performancePercent": 100,
+            "lastReadingAt": DEMO_NOW,
+            "dailyOutputKwh30d": [],
+            "serviceHistory": [],
+        }
+    row = {
+        "id": property_id,
+        "aliases": [],
+        "email": payload["email"].strip().lower(),
+        "owner_emails": [payload["email"].strip().lower()],
+        "address": {
+            "street": parts[0],
+            "suburb": parts[1] if len(parts) > 1 else "",
+            "state": "NSW",
+            "postcode": "",
+        },
+        "image_variant": 0,
+        "occupancy_status": "pending_invitation" if payload.get("invite_email") else "vacant",
+        "system": system,
+        "current_tenant": None,
+        "tenant_history": [],
+        "monthly_income": 0,
+        "balance_outstanding": 0,
+        "balance_total": 0,
+        "total_earned": 0,
+        "total_invested": 0,
+        "monthly": [],
+        "maintenance_reserve": {
+            "accrued": 0,
+            "nextCostDescription": "First inspection",
+            "nextCostDate": "",
+            "nextCostEstimate": 150,
+        },
+        "pending_invitation_email": payload.get("invite_email"),
+        "performance_alert": None,
+        "leave_request": None,
+    }
+    LANDLORD_PROPERTY_VIEWS.append(row)
+    return _property_detail(row)
 
 
 def invite_property_tenant(property_id: str, payload: dict) -> dict:

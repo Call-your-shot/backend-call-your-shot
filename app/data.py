@@ -54,3 +54,5 @@ SOLAR_INSTALLATIONS: list[dict] = []
 PRICE_ADJUSTMENTS: list[dict] = []
 LEASE_REQUESTS: list[dict] = []
 CONTRACTS: list[dict] = []
+USERS: list[dict] = []
+

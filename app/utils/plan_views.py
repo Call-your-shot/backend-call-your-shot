@@ -72,7 +72,7 @@ def _find_plan(plan_id: str, email: Optional[str] = None) -> dict:
         "id": plan_id,
         "email": email or "tenant@example.com",
         "tenant_name": tenant_name,
-        "property_id": "prop-priya-figtree",
+        "property_id": "prop-qimatx-figtree",
         "status": "active",
         "address": {
             "street": "12/88 Corrimal Street",

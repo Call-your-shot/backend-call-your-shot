@@ -153,7 +153,7 @@ def _initial_projects() -> dict[UUID, dict[str, Any]]:
 _ACCOUNT_SEEDS = {
     "sarah.chen@example.com": (2_310, 3_510, 1_200, 5_014, 118, "tenant"),
     "david.marino@example.com": (1_880, 2_580, 700, 8_600, 74, "landlord"),
-    "priya.nair@example.com": (2_840, 4_760, 1_920, 6_800, 156, "tenant"),
+    "qimatx@example.com": (2_840, 4_760, 1_920, 6_800, 156, "tenant"),
     # These aliases match the email-only identities used by the backend demo.
     "tenant@example.com": (2_310, 3_510, 1_200, 5_014, 118, "tenant"),
     "landlord@example.com": (1_880, 2_580, 700, 8_600, 74, "landlord"),

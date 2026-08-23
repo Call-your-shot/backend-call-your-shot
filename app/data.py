@@ -76,8 +76,8 @@ USERS: list[dict] = [
     },
     {
         "id": "aaaaaaaa-3333-4333-8333-333333333333",
-        "email": "priya.nair@example.com",
-        "full_name": "Priya Nair",
+        "email": "qimatx@example.com",
+        "full_name": "Qimatx",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "status": "active",
     },
@@ -102,11 +102,11 @@ USER_PREFERENCES: dict[str, dict] = {}
 SUPPORT_REPORTS: list[dict] = []
 TENANCY_PLANS: list[dict] = [
     {
-        "id": "ten-priya-wollongong",
+        "id": "ten-qimatx-wollongong",
         "email": "tenant@example.com",
-        "emails": ["tenant@example.com", "priya.nair@example.com", "sarah.chen@example.com"],
-        "tenant_name": "Priya Sharma",
-        "property_id": "prop-priya-figtree",
+        "emails": ["tenant@example.com", "qimatx@example.com", "sarah.chen@example.com"],
+        "tenant_name": "Qimatx",
+        "property_id": "prop-qimatx-figtree",
 
         "status": "active",
         "address": {
@@ -150,14 +150,14 @@ TENANCY_PLANS: list[dict] = [
 LANDLORD_PROPERTY_VIEWS: list[dict] = [
     {
         "id": "prop-owned-1",
-        "aliases": ["prop-priya-figtree"],
+        "aliases": ["prop-qimatx-figtree"],
         "email": "landlord@example.com",
 
         "owner_emails": [
             "owner@example.com",
             "landlord@example.com",
             "david.marino@example.com",
-            "priya.nair@example.com",
+            "qimatx@example.com",
         ],
         "address": {
             "street": "42 Bellambi Lane",

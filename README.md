@@ -212,7 +212,7 @@ The seeded UI identities are:
 ```text
 sarah.chen@example.com
 david.marino@example.com
-priya.nair@example.com
+qimatx@example.com
 tenant@example.com
 landlord@example.com
 ```
@@ -285,7 +285,7 @@ The in-memory demo API uses:
 ```
 
 The UI-facing demo accounts are `sarah.chen@example.com`,
-`david.marino@example.com`, and `priya.nair@example.com`. Dashboard and
+`david.marino@example.com`, and `qimatx@example.com`. Dashboard and
 workflow data remain process-local in demo mode and reset when FastAPI
 restarts. Green credits can use either the demo repository or Supabase. A
 production deployment must use the prepared Supabase schema rather than

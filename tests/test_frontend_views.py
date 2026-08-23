@@ -12,20 +12,20 @@ def test_list_tenant_plans_by_email():
     assert response.status_code == 200
     data = response.json()
     assert "plans" in data
-    assert data["plans"][0]["id"] == "ten-priya-wollongong"
+    assert data["plans"][0]["id"] == "ten-qimatx-wollongong"
     assert data["plans"][0]["address"]["suburb"] == "Wollongong"
     assert data["plans"][0]["lastMonth"]["savingsDollars"] == 26.3
 
 
 def test_get_tenant_plan_detail_by_email():
     response = client.get(
-        "/api/plans/ten-priya-wollongong",
+        "/api/plans/ten-qimatx-wollongong",
         params={"email": "tenant@example.com"},
     )
 
     assert response.status_code == 200
     data = response.json()
-    assert data["propertyId"] == "prop-priya-figtree"
+    assert data["propertyId"] == "prop-qimatx-figtree"
     assert data["ratePerKwhCents"] == 15
     assert data["gridRateCents"] == 29
     assert data["monthly"][0]["month"] == "Jul 2025"
@@ -35,12 +35,12 @@ def test_get_tenant_plan_detail_by_email():
 
 
 def test_get_tenant_plan_detail_without_email():
-    response = client.get("/api/plans/ten-priya-wollongong")
+    response = client.get("/api/plans/ten-qimatx-wollongong")
 
     assert response.status_code == 200
     data = response.json()
-    assert data["id"] == "ten-priya-wollongong"
-    assert data["propertyId"] == "prop-priya-figtree"
+    assert data["id"] == "ten-qimatx-wollongong"
+    assert data["propertyId"] == "prop-qimatx-figtree"
     assert data["landlordName"] == "Coastal Realty Group"
     assert data["monthly"][0]["savingsDollars"] == 24.7
 
@@ -84,8 +84,8 @@ def test_dashboard_combines_tenant_and_owner_views_by_email():
     tenant_response = client.get("/api/dashboard", params={"email": "tenant@example.com"})
     assert tenant_response.status_code == 200
     tenant_dashboard = tenant_response.json()
-    assert tenant_dashboard["tenancies"][0]["id"] == "ten-priya-wollongong"
-    assert tenant_dashboard["tenancies"][0]["propertyId"] == "prop-priya-figtree"
+    assert tenant_dashboard["tenancies"][0]["id"] == "ten-qimatx-wollongong"
+    assert tenant_dashboard["tenancies"][0]["propertyId"] == "prop-qimatx-figtree"
     assert tenant_dashboard["tenancies"][0]["ratePerKwhCents"] == 15
     assert tenant_dashboard["tenancies"][0]["monthly"][0] == {
         "month": "Jul 2025",
@@ -124,7 +124,7 @@ def test_dashboard_unknown_email_returns_empty_sections():
 
 def test_tenant_leave_request_owner_approval_and_notifications():
     leave_response = client.post(
-        "/api/plans/ten-priya-wollongong/leave",
+        "/api/plans/ten-qimatx-wollongong/leave",
         json={
             "email": "tenant@example.com",
             "moveOutDate": "2026-11-01",
@@ -171,7 +171,7 @@ def test_tenant_leave_request_owner_approval_and_notifications():
     assert approved_property["leaveRequest"]["status"] == "approved"
 
     ended_plan = client.get(
-        "/api/plans/ten-priya-wollongong",
+        "/api/plans/ten-qimatx-wollongong",
         params={"email": "tenant@example.com"},
     ).json()
     assert ended_plan["status"] == "ended"
@@ -184,7 +184,7 @@ def test_tenant_leave_request_owner_approval_and_notifications():
     assert any(
         item["type"] == "leave_request_approved"
         and item["actionRequired"] is False
-        and item["relatedId"] == "ten-priya-wollongong"
+        and item["relatedId"] == "ten-qimatx-wollongong"
         for item in tenant_notifications.json()["notifications"]
     )
 

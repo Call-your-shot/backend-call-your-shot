@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import re
 from datetime import datetime, timezone
 from typing import Optional
 from uuid import uuid4
@@ -17,6 +16,7 @@ from ..schemas.proposal import (
     CreateProposalRequest,
     ProposalResponse,
 )
+from ..utils.address import parse_frontend_address
 from ..utils.assessment_service import INITIAL_ASSESSMENTS
 
 router = APIRouter(tags=["proposals"])
@@ -37,37 +37,12 @@ def _proposal_terms(proposal: dict) -> dict:
     }
 
 
-def _parse_address_text(address_text: str) -> dict:
-    cleaned = " ".join(address_text.strip().split())
-    parts = [part.strip() for part in cleaned.split(",") if part.strip()]
-    street = parts[0] if parts else cleaned
-    locality = parts[1] if len(parts) > 1 else ""
-    state = "NSW"
-    postcode = "2500"
-
-    locality_match = re.match(r"^(?P<suburb>.*?)(?:\s+(?P<state>[A-Z]{2,3}))?(?:\s+(?P<postcode>\d{4}))?$", locality)
-    if locality_match:
-        suburb = (locality_match.group("suburb") or "").strip()
-        state = locality_match.group("state") or state
-        postcode = locality_match.group("postcode") or postcode
-    else:
-        suburb = locality
-
-    return {
-        "line1": street or "1 Main St",
-        "suburb": suburb or "Wollongong",
-        "state": state,
-        "postcode": postcode,
-        "fullAddress": cleaned or "1 Main St, Wollongong NSW 2500",
-    }
-
-
 def _extract_property(address_raw: str | AddressModel | dict) -> dict:
     if isinstance(address_raw, str):
-        parsed = _parse_address_text(address_raw)
-        full_addr = parsed["fullAddress"]
-        line1 = parsed["line1"]
-        suburb = parsed["suburb"]
+        parsed = parse_frontend_address(address_raw, default_postcode="2500")
+        full_addr = parsed["full_address"] or "1 Main St, Wollongong NSW 2500"
+        line1 = parsed["street"] or "1 Main St"
+        suburb = parsed["suburb"] or "Wollongong"
         state = parsed["state"]
         postcode = parsed["postcode"]
     elif isinstance(address_raw, AddressModel):

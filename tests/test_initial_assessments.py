@@ -73,6 +73,21 @@ def test_initial_assessment_uses_conservative_cost_defaults():
     }
 
 
+def test_initial_assessment_uses_optimistic_monte_carlo_alpha_defaults():
+    response = client.post("/api/v1/assessments/initial", json=payload())
+    assert response.status_code == 201
+    data = response.json()
+    assumptions = data["monteCarlo"]["assumptions"]
+    assert assumptions["alpha_minimum"] == 0.65
+    assert assumptions["alpha_mode"] == 0.80
+    assert assumptions["alpha_maximum"] == 0.95
+    assert (
+        data["pricing"]["exportRateCentsPerKwh"]
+        <= data["pricing"]["tenantSolarRateCentsPerKwh"]["median"]
+        <= data["pricing"]["gridRateCentsPerKwh"]
+    )
+
+
 def test_proposal_snapshots_saved_assessment_economics():
     assessment = client.post("/api/v1/assessments/initial", json=payload()).json()
     response = client.post(

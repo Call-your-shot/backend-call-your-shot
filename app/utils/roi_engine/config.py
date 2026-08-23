@@ -50,6 +50,14 @@ MONTE_CARLO_WARNING_THRESHOLDS = {
     "many_no_payback_probability": 0.25,
 }
 
+# Initial-assessment pricing is deliberately aggressive for the landlord
+# compared with the neutral 0.40-0.75 range. These values affect only the
+# assumption-based Monte Carlo approximation; the live hourly pricing engine
+# continues to own its own independently configurable alpha values.
+DEFAULT_MONTE_CARLO_ALPHA_MIN = 0.65
+DEFAULT_MONTE_CARLO_ALPHA_MODE = 0.80
+DEFAULT_MONTE_CARLO_ALPHA_MAX = 0.95
+
 SCENARIOS: dict[str, dict[str, float]] = {
     "conservative": {
         "generation_multiplier": 0.90,

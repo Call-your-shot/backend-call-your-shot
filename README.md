@@ -127,6 +127,14 @@ process, and return separate tenant-savings and landlord-payback economics.
 Proposals can reference the saved assessment so they do not recalculate a
 different financial result.
 
+The default assumption-based dynamic-pricing approximation uses an aggressive
+landlord-optimistic alpha range of `0.65 / 0.80 / 0.95` (minimum / mode / maximum).
+Higher alpha increases the tenant solar tariff within the export-to-grid price
+spread, shortening modelled landlord payback while preserving the invariant
+`export rate <= tenant solar rate <= grid rate`. These defaults do not change
+the separate live hourly pricing engine, and callers of `/roi/estimate-initial`
+can still provide explicit alpha assumptions.
+
 Annual estimation:
 
 ```text

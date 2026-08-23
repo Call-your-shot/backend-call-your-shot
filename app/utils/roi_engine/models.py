@@ -10,6 +10,9 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from .config import (
     DEFAULT_FORECAST_HORIZON_MONTHS,
     DEFAULT_METER_TOLERANCE_RATIO,
+    DEFAULT_MONTE_CARLO_ALPHA_MAX,
+    DEFAULT_MONTE_CARLO_ALPHA_MIN,
+    DEFAULT_MONTE_CARLO_ALPHA_MODE,
     DEFAULT_TREND_TOLERANCE_RATIO,
     SCENARIOS,
 )
@@ -562,9 +565,9 @@ class InitialPricingAssumptions(BaseModel):
         default="usage_function",
         description="Derive alpha from simulated consumption, or sample it from a stated triangular assumption.",
     )
-    alpha_min: Annotated[float, Field(ge=0, le=1)] = 0.40
-    alpha_mode: Annotated[float, Field(ge=0, le=1)] = 0.575
-    alpha_max: Annotated[float, Field(ge=0, le=1)] = 0.75
+    alpha_min: Annotated[float, Field(ge=0, le=1)] = DEFAULT_MONTE_CARLO_ALPHA_MIN
+    alpha_mode: Annotated[float, Field(ge=0, le=1)] = DEFAULT_MONTE_CARLO_ALPHA_MODE
+    alpha_max: Annotated[float, Field(ge=0, le=1)] = DEFAULT_MONTE_CARLO_ALPHA_MAX
     discount_sensitivity: Positive = Field(
         default=0.50,
         description="Positive k coefficient in alpha(q) = alpha_min + spread * exp(-k*q).",
@@ -777,6 +780,9 @@ class InitialEstimateAssumptionsResult(BaseModel):
     self_consumption_maximum: float
     pricing_mode: Literal["fixed", "dynamic"]
     alpha_estimation_mode: Literal["usage_function", "triangular"]
+    alpha_minimum: float
+    alpha_mode: float
+    alpha_maximum: float
     alpha_usage_normalisation: str
     annual_panel_degradation_rate: float
     annual_usage_growth_rate: float
